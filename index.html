@@ -1,6 +1,111 @@
-<script>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Stock NTE Baru - Reg 3</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse untuk parsing CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-blue-700 text-white p-5 shadow-lg flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <h1 class="text-2xl font-bold">Dashboard Stock NTE Baru</h1>
+        </div>
+        <span class="bg-blue-800 text-sm px-3 py-1 rounded-full border border-blue-400">Sheet: NTE BARU</span>
+    </header>
+
+    <div class="container mx-auto p-6 space-y-6">
+
+        <!-- Status/Error Notification -->
+        <div id="status-message" class="hidden p-4 rounded-lg text-sm font-semibold"></div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-blue-600">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">TOTAL STOCK NTE BARU</p>
+                <h3 id="total-stock" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
+            </div>
+            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-emerald-500">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ONT DUAL BAND</p>
+                <h3 id="total-dualband" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
+            </div>
+            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-indigo-500">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ONT PREMIUM</p>
+                <h3 id="total-premium" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
+            </div>
+            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-amber-500">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">BIG ONT</p>
+                <h3 id="total-bigont" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-white p-4 rounded-lg shadow flex flex-wrap gap-4 items-center">
+            <div class="flex items-center space-x-2">
+                <label for="filter-witel" class="font-semibold text-gray-700 text-sm">Filter Distrik / Witel:</label>
+                <select id="filter-witel" class="border border-gray-300 rounded-md px-3 py-1.5 bg-gray-50 text-sm outline-none">
+                    <option value="ALL">Semua Witel / Distrik</option>
+                </select>
+            </div>
+            <div class="flex items-center space-x-2">
+                <label for="filter-merk" class="font-semibold text-gray-700 text-sm">Filter Merk:</label>
+                <select id="filter-merk" class="border border-gray-300 rounded-md px-3 py-1.5 bg-gray-50 text-sm outline-none">
+                    <option value="ALL">Semua Merk</option>
+                </select>
+            </div>
+            <button onclick="loadData()" class="ml-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-1.5 rounded-md transition duration-150">
+                🔄 Refresh Data
+            </button>
+        </div>
+
+        <!-- Visual Chart Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-lg shadow">
+                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Distribusi Stock per Distrik / Witel</h4>
+                <div class="h-64">
+                    <canvas id="chartWitel"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-5 rounded-lg shadow">
+                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Distribusi Tipe ONT / Kategori</h4>
+                <div class="h-64">
+                    <canvas id="chartTipe"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="bg-white p-5 rounded-lg shadow overflow-x-auto">
+            <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Rincian Detail Stock - Sheet NTE BARU</h4>
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-600">WITEL / DISTRIK</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-600">MODEL / KATEGORI</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-600">MERK</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-600">TYPE ONT</th>
+                        <th class="px-4 py-2 text-right font-semibold text-gray-600">QTY</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="5" class="text-center py-6 text-gray-500">Memuat data dari Google Sheets...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
         const sheetID = '1OejhaFCnEhLa8mgkh61QJ7Qk3jNp4PcD2jh96luGbVU';
-        // Ubah langsung ke sheet "NTE BARU" sesuai permintaan Anda
         const sheetName = 'NTE BARU';
         
         let allData = [];
@@ -18,8 +123,6 @@
 
         async function loadData() {
             showStatus('Mengambil data khusus sheet NTE BARU...', 'info');
-            
-            // Mengambil data spesifik dari Sheet "NTE BARU"
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
             
             Papa.parse(csvUrl, {
@@ -33,11 +136,11 @@
                         showStatus('Data sheet NTE BARU berhasil dimuat!', 'success');
                         setTimeout(() => document.getElementById('status-message').classList.add('hidden'), 3000);
                     } else {
-                        showStatus('Gagal memuat data: Sheet NTE BARU kosong atau nama sheet tidak sesuai.', 'error');
+                        showStatus('Gagal memuat data: Sheet NTE BARU kosong atau tidak ditemukan.', 'error');
                     }
                 },
                 error: function(err) {
-                    showStatus('Gagal terhubung ke Google Sheets. Pastikan akses link bersifat publik.', 'error');
+                    showStatus('Gagal terhubung ke Google Sheets. Pastikan Spreadsheet diset "Anyone with the link can view".', 'error');
                 }
             });
         }
@@ -49,7 +152,7 @@
 
         function populateDropdowns() {
             const witels = [...new Set(allData.map(d => d['WITEL'] || d['DISTRIK'])).filter(Boolean)].sort();
-            const merks = [...new Set(allData.map(d => d['MERK'])).filter(Boolean)].sort();
+            const merks = [...new Set(allData.map(d => d['MERK']))].filter(Boolean).sort();
 
             const selectWitel = document.getElementById('filter-witel');
             selectWitel.innerHTML = '<option value="ALL">Semua Witel / Distrik</option>';
@@ -71,7 +174,6 @@
             const selectedWitel = document.getElementById('filter-witel').value;
             const selectedMerk = document.getElementById('filter-merk').value;
 
-            // Karena file sudah spesifik sheet NTE BARU, tampilkan semua baris yang ada di sheet tersebut
             const filtered = allData.filter(item => {
                 const witelVal = item['WITEL'] || item['DISTRIK'] || '';
                 const witelMatch = (selectedWitel === 'ALL' || witelVal === selectedWitel);
@@ -103,26 +205,23 @@
                 tipeMap[tipe] = (tipeMap[tipe] || 0) + qty;
             });
 
-            // Update Metric Cards
             document.getElementById('total-stock').innerText = totalStock.toLocaleString('id-ID');
             document.getElementById('total-dualband').innerText = dualBand.toLocaleString('id-ID');
             document.getElementById('total-premium').innerText = premium.toLocaleString('id-ID');
             document.getElementById('total-bigont').innerText = bigOnt.toLocaleString('id-ID');
 
-            // Update Table
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
             
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Tidak ada data di sheet NTE BARU.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada data ditemukan.</td></tr>`;
             } else {
                 filtered.slice(0, 100).forEach(item => {
                     const qty = parseFloat(item['QTY'] || item['JUMLAH']) || 0;
                     tbody.innerHTML += `
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-2 font-medium">${item['WITEL'] || item['DISTRIK'] || '-'}</td>
-                            <td class="px-4 py-2"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-semibold">NTE BARU</span></td>
-                            <td class="px-4 py-2">${item['JENIS'] || item['KATEGORI'] || '-'}</td>
+                            <td class="px-4 py-2">${item['JENIS'] || item['KATEGORI'] || item['MODEL'] || '-'}</td>
                             <td class="px-4 py-2 font-semibold">${item['MERK'] || '-'}</td>
                             <td class="px-4 py-2">${item['TYPE'] || '-'}</td>
                             <td class="px-4 py-2 text-right font-bold text-blue-700">${qty.toLocaleString('id-ID')}</td>
@@ -177,3 +276,5 @@
 
         document.addEventListener('DOMContentLoaded', loadData);
     </script>
+</body>
+</html>
