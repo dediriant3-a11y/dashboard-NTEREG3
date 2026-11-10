@@ -46,16 +46,27 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold tracking-tight">Dashboard Stok ONT</h1>
-                    <p class="text-xs text-red-100 flex items-center gap-1.5 mt-0.5">
+                    <p id="subCategoryTitle" class="text-xs text-red-100 flex items-center gap-1.5 mt-0.5">
                         <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        Report NTE Baru (Live Data Sync)
+                        REPORT NTE BARU (Live Data Sync)
                     </p>
                 </div>
             </div>
 
-            <!-- Controls (Filter & Reload) -->
+            <!-- Controls (Category, District Filter & Reload) -->
             <div class="flex items-center flex-wrap gap-3 w-full sm:w-auto">
-                <div class="relative flex-1 sm:w-64">
+                <!-- Dropdown Kategori Sheet -->
+                <div class="relative flex-1 sm:w-52">
+                    <i class="fa-solid fa-layer-group absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <select id="categoryFilter" class="w-full pl-9 pr-8 py-2 bg-white text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer transition">
+                        <option value="BARU">NTE BARU</option>
+                        <option value="DISMANTLING">NTE DISMANTLING</option>
+                        <option value="REFURBISH">NTE REFURBISH</option>
+                    </select>
+                </div>
+
+                <!-- Dropdown Filter Distrik -->
+                <div class="relative flex-1 sm:w-56">
                     <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     <select id="districtFilter" class="w-full pl-9 pr-8 py-2 bg-white text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer transition">
                         <option value="ALL">Semua Distrik (All Distrik)</option>
@@ -236,25 +247,42 @@
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-auto">
         <div class="max-w-7xl mx-auto px-4">
-            <p>Dashboard Stok ONT NTE Baru &copy; Live Sync Engine Google Sheets</p>
+            <p>Dashboard Stok ONT &copy; Live Sync Engine Google Sheets</p>
         </div>
     </footer>
 
     <!-- JavaScript Data Logic -->
     <script>
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1068491274&single=true&output=csv';
+        // Mapping URL Sheet sesuai Kategori
+        const SHEET_URLS = {
+            BARU: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1068491274&single=true&output=csv',
+            DISMANTLING: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?output=csv',
+            REFURBISH: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?output=csv'
+        };
 
         // State Data
+        let currentCategory = 'BARU';
         let parsedHeaders = []; // { colIndex, jenis, type }
         let districtRows = [];  // Array of { districtName, counts: [] }
         let selectedDistrict = 'ALL';
 
         window.onload = function() {
-            fetchCSVData();
+            // Setup Event Listeners
+            document.getElementById('categoryFilter').addEventListener('change', function(e) {
+                currentCategory = e.target.value;
+                document.getElementById('subCategoryTitle').innerHTML = `
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    REPORT NTE ${currentCategory} (Live Data Sync)
+                `;
+                fetchCSVData();
+            });
+
             document.getElementById('districtFilter').addEventListener('change', function(e) {
                 selectedDistrict = e.target.value;
                 processAndRenderData();
             });
+
+            fetchCSVData();
         };
 
         // Standard CSV Parser with quote escaping support
@@ -297,33 +325,51 @@
             return lines;
         }
 
-        // Fetch CSV Live
+        // Fetch CSV Live dengan robust Fallback Proxy CORS
         async function fetchCSVData() {
             showLoading(true);
-            showStatus('Mengunduh data terbaru dari Google Sheets...', 'info');
+            showStatus(`Mengunduh data REPORT NTE ${currentCategory}...`, 'info');
 
             const refreshIcon = document.getElementById('refreshIcon');
             refreshIcon.classList.add('fa-spin');
 
+            const targetUrl = SHEET_URLS[currentCategory] || SHEET_URLS.BARU;
+            let csvText = '';
+
             try {
-                const cacheBustUrl = CSV_URL + '&_t=' + new Date().getTime();
-                const response = await fetch(cacheBustUrl);
+                // Primary Direct Fetch Attempt
+                try {
+                    const response = await fetch(targetUrl, { redirect: 'follow' });
+                    if (response.ok) {
+                        csvText = await response.text();
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (directErr) {
+                    console.warn('Direct fetch failed, trying proxy fallback:', directErr);
+                    // Fallback using CORS Proxy
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+                    const proxyResponse = await fetch(proxyUrl);
+                    if (!proxyResponse.ok) throw new Error(`Proxy HTTP ${proxyResponse.status}`);
+                    csvText = await proxyResponse.text();
+                }
 
-                if (!response.ok) throw new Error(`HTTP Status Code ${response.status}`);
+                if (!csvText || csvText.trim().length === 0) {
+                    throw new Error("Data sheet kosong.");
+                }
 
-                const csvText = await response.text();
                 const matrix = parseCSV(csvText);
 
-                if (!matrix || matrix.length < 3) throw new Error("Data sheet tidak valid atau kosong.");
+                if (!matrix || matrix.length < 3) throw new Error("Format tabel tidak valid.");
 
                 parseStructure(matrix);
                 populateDistrictDropdown();
                 processAndRenderData();
 
-                showStatus('Data berhasil diperbarui secara akurat!', 'success');
+                showStatus(`Data REPORT NTE ${currentCategory} berhasil dimuat!`, 'success');
             } catch (err) {
                 console.error(err);
-                showStatus('Gagal memuat data Google Sheet: ' + err.message, 'error');
+                showStatus(`Gagal memuat data Google Sheet (${currentCategory}): ${err.message}. Pastikan sheet telah dipublikasikan ke web (Publish to Web).`, 'error');
             } finally {
                 showLoading(false);
                 refreshIcon.classList.remove('fa-spin');
