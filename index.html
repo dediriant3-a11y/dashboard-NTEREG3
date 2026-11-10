@@ -3,329 +3,774 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Stock NTE Baru - Reg 3</title>
+    <title>Dashboard Stok ONT - Live Google Sheets Data</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- PapaParse -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(229, 231, 235, 1);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-    <!-- Header -->
-    <header class="bg-blue-700 text-white p-5 shadow-lg flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-            <h1 class="text-2xl font-bold">Dashboard Stock NTE Baru</h1>
+    <!-- Header Navigation Bar -->
+    <header class="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-white/10 rounded-xl backdrop-blur-md">
+                    <i class="fa-solid font-bold fa-network-wired text-2xl text-amber-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Dashboard Stok ONT</h1>
+                    <p class="text-xs text-red-100 flex items-center gap-1.5">
+                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Report NTE Baru (Live Google Sheets)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Controls (Filter & Reload) -->
+            <div class="flex items-center flex-wrap gap-3 w-full sm:w-auto">
+                <div class="relative flex-1 sm:w-64">
+                    <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <select id="districtFilter" class="w-full pl-9 pr-8 py-2 bg-white text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer transition">
+                        <option value="ALL">Semua Distrik (All Distrik)</option>
+                    </select>
+                </div>
+
+                <button id="refreshBtn" onclick="fetchCSVData()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg backdrop-blur-md transition flex items-center justify-center gap-2 border border-white/20 active:scale-95">
+                    <i id="refreshIcon" class="fa-solid fa-rotate text-xs"></i>
+                    <span>Reload</span>
+                </button>
+            </div>
         </div>
-        <span class="bg-blue-800 text-sm px-3 py-1 rounded-full border border-blue-400">Sheet: NTE BARU</span>
     </header>
 
-    <div class="container mx-auto p-6 space-y-6">
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full space-y-6">
 
-        <!-- Status Notification -->
-        <div id="status-message" class="hidden p-4 rounded-lg text-sm font-semibold"></div>
-
-        <!-- Metric Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-blue-600">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">TOTAL STOCK NTE BARU</p>
-                <h3 id="total-stock" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
+        <!-- Status & Alert Messages -->
+        <div id="statusAlert" class="hidden p-4 rounded-xl border flex items-center justify-between text-sm transition-all duration-300">
+            <div class="flex items-center gap-3">
+                <i id="statusIcon" class="fa-solid text-lg"></i>
+                <span id="statusMessage" class="font-medium"></span>
             </div>
-            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-emerald-500">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ONT DUAL BAND</p>
-                <h3 id="total-dualband" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
-            </div>
-            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-indigo-500">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ONT PREMIUM</p>
-                <h3 id="total-premium" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
-            </div>
-            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-amber-500">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">BIG ONT</p>
-                <h3 id="total-bigont" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
-            </div>
-        </div>
-
-        <!-- Filter Bar -->
-        <div class="bg-white p-4 rounded-lg shadow flex flex-wrap gap-4 items-center">
-            <div class="flex items-center space-x-2">
-                <label for="filter-witel" class="font-semibold text-gray-700 text-sm">Filter Distrik / Witel:</label>
-                <select id="filter-witel" class="border border-gray-300 rounded-md px-3 py-1.5 bg-gray-50 text-sm outline-none">
-                    <option value="ALL">Semua Witel / Distrik</option>
-                </select>
-            </div>
-            <div class="flex items-center space-x-2">
-                <label for="filter-merk" class="font-semibold text-gray-700 text-sm">Filter Merk:</label>
-                <select id="filter-merk" class="border border-gray-300 rounded-md px-3 py-1.5 bg-gray-50 text-sm outline-none">
-                    <option value="ALL">Semua Merk</option>
-                </select>
-            </div>
-            <button onclick="loadData()" class="ml-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-1.5 rounded-md transition duration-150">
-                🔄 Refresh Data
+            <button onclick="document.getElementById('statusAlert').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <!-- Visual Chart Section -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-5 rounded-lg shadow">
-                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Distribusi Stock per Distrik / Witel</h4>
-                <div class="h-64">
-                    <canvas id="chartWitel"></canvas>
+        <!-- Skeleton Loading Loader -->
+        <div id="loadingState" class="grid grid-cols-1 md:grid-cols-4 gap-4 animate-pulse">
+            <div class="h-28 bg-slate-200 rounded-xl"></div>
+            <div class="h-28 bg-slate-200 rounded-xl"></div>
+            <div class="h-28 bg-slate-200 rounded-xl"></div>
+            <div class="h-28 bg-slate-200 rounded-xl"></div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div id="kpiSection" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 hidden">
+            <!-- Total Stok Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition border-l-4 border-l-red-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Unit Stok</p>
+                        <h3 id="kpiTotalStok" class="text-3xl font-extrabold text-slate-800 mt-2">0</h3>
+                    </div>
+                    <div class="p-3 bg-red-50 text-red-600 rounded-xl">
+                        <i class="fa-solid font-bold fa-boxes-stacked text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500 mt-3 flex items-center gap-1">
+                    <i class="fa-solid fa-chart-line text-emerald-500"></i> Total terkumpul dari filter
+                </p>
+            </div>
+
+            <!-- Distrik Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition border-l-4 border-l-indigo-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Distrik Aktif</p>
+                        <h3 id="kpiTotalDistrik" class="text-3xl font-extrabold text-slate-800 mt-2">0</h3>
+                    </div>
+                    <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <i class="fa-solid fa-city text-xl"></i>
+                    </div>
+                </div>
+                <p id="kpiDistrikSubText" class="text-xs text-slate-500 mt-3">Jumlah wilayah terpilih</p>
+            </div>
+
+            <!-- Top Jenis ONT Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition border-l-4 border-l-emerald-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Jenis ONT Dominan</p>
+                        <h3 id="kpiTopJenis" class="text-xl font-bold text-slate-800 mt-2 truncate max-w-[170px]">-</h3>
+                    </div>
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <i class="fa-solid fa-microchip text-xl"></i>
+                    </div>
+                </div>
+                <p id="kpiTopJenisVal" class="text-xs text-slate-500 mt-3">0 unit</p>
+            </div>
+
+            <!-- Top Type ONT Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition border-l-4 border-l-amber-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Type ONT Terbanyak</p>
+                        <h3 id="kpiTopType" class="text-xl font-bold text-slate-800 mt-2 truncate max-w-[170px]">-</h3>
+                    </div>
+                    <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                        <i class="fa-solid fa-layer-group text-xl"></i>
+                    </div>
+                </div>
+                <p id="kpiTopTypeVal" class="text-xs text-slate-500 mt-3">0 unit</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div id="chartSection" class="grid grid-cols-1 lg:grid-cols-12 gap-6 hidden">
+            <!-- Pie/Doughnut Chart per Jenis ONT -->
+            <div class="lg:col-span-5 glass-card rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-red-500"></i> Dispersi Distribusi Jenis ONT
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">Persentase stok berdasarkan kategori Jenis ONT</p>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="jenisChart"></canvas>
                 </div>
             </div>
-            <div class="bg-white p-5 rounded-lg shadow">
-                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Distribusi Tipe ONT / Merk</h4>
-                <div class="h-64">
-                    <canvas id="chartTipe"></canvas>
+
+            <!-- Bar Chart per Type ONT -->
+            <div class="lg:col-span-7 glass-card rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-indigo-500"></i> Detail Total per Type ONT
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">Perbandingan volume unit per tipe spesifik</p>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="typeChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Data Table -->
-        <div class="bg-white p-5 rounded-lg shadow overflow-x-auto">
-            <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Rincian Detail Stock - Sheet NTE BARU</h4>
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">WITEL / DISTRIK</th>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">MODEL / KATEGORI</th>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">MERK</th>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">TYPE ONT</th>
-                        <th class="px-4 py-2 text-right font-semibold text-gray-600">QTY</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body" class="divide-y divide-gray-200">
-                    <tr>
-                        <td colspan="5" class="text-center py-6 text-gray-500">Memuat data dari Google Sheets...</td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Summary Tables (Jenis & Type Breakdowns) -->
+        <div id="tablesSection" class="grid grid-cols-1 lg:grid-cols-2 gap-6 hidden">
+            
+            <!-- Table Ringkasan Jenis ONT -->
+            <div class="glass-card rounded-2xl p-6 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-tags text-rose-500"></i> Total Berdasarkan Jenis ONT
+                    </h3>
+                    <span id="badgeTotalJenis" class="px-2.5 py-1 bg-rose-100 text-rose-700 font-semibold rounded-full text-xs">0 Jenis</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                                <th class="p-3 rounded-l-lg">Jenis ONT</th>
+                                <th class="p-3 text-right">Jumlah (Unit)</th>
+                                <th class="p-3 text-right rounded-r-lg">% Porsi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jenisTableBody" class="divide-y divide-slate-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Table Ringkasan Type ONT -->
+            <div class="glass-card rounded-2xl p-6 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-cubes text-blue-500"></i> Total Berdasarkan Type ONT
+                    </h3>
+                    <span id="badgeTotalType" class="px-2.5 py-1 bg-blue-100 text-blue-700 font-semibold rounded-full text-xs">0 Type</span>
+                </div>
+                <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="sticky top-0 bg-slate-100 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="p-3">Jenis ONT</th>
+                                <th class="p-3">Type ONT</th>
+                                <th class="p-3 text-right">Jumlah (Unit)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="typeTableBody" class="divide-y divide-slate-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
 
-    </div>
+        <!-- Full Matrix / Detail Data Table -->
+        <div id="fullDataSection" class="glass-card rounded-2xl p-6 shadow-sm hidden space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-table-cells text-slate-600"></i> Data Rincian Matriks Per Distrik
+                    </h3>
+                    <p class="text-xs text-slate-500">Menampilkan matriks jumlah stok per lokasi Distrik</p>
+                </div>
+                <div class="relative w-full sm:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="tableSearch" onkeyup="renderMatrixTable()" placeholder="Cari Distrik..." class="w-full pl-8 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-red-500">
+                </div>
+            </div>
 
+            <!-- Table Container -->
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table id="matrixTable" class="w-full text-left text-xs border-collapse">
+                    <!-- Dynamic Headers & Body -->
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 mt-auto">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>Dashboard Stok ONT NTE Baru &copy; Live Sync Google Sheets Engine</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
     <script>
-        // URL Publish Web CSV langsung milik Anda
-        const publishedCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=844126359&single=true&output=csv';
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1068491274&single=true&output=csv';
+
+        // Application State
+        let rawCsvData = [];
+        let parsedHeaders = []; // { index, jenis, type }
+        let districtRows = [];  // Array of { districtName, counts: [num, num, ...] }
+        let selectedDistrict = 'ALL';
         
-        let rawParsedData = [];
-        let normalizedData = [];
-        let chartWitelInstance = null;
-        let chartTipeInstance = null;
+        // Chart instances
+        let jenisChartInstance = null;
+        let typeChartInstance = null;
 
-        function showStatus(msg, type = 'info') {
-            const el = document.getElementById('status-message');
-            el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-yellow-100', 'text-yellow-700');
-            if (type === 'error') el.classList.add('bg-red-100', 'text-red-700');
-            else if (type === 'success') el.classList.add('bg-green-100', 'text-green-700');
-            else el.classList.add('bg-yellow-100', 'text-yellow-700');
-            el.innerText = msg;
-        }
+        // Colors for Charts
+        const chartColors = [
+            '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', 
+            '#ec4899', '#06b6d4', '#84cc16', '#64748b', '#d97706',
+            '#6366f1', '#14b8a6', '#a855f7', '#f43f5e'
+        ];
 
-        function loadData() {
-            showStatus('Menghubungkan ke CSV Publish NTE BARU...', 'info');
-            
-            Papa.parse(publishedCsvUrl, {
-                download: true,
-                header: false, // Jangan gunakan header otomatis karena judul kolom di sheet ini terstruktur fleksibel
-                skipEmptyLines: true,
-                complete: function(results) {
-                    if (results.data && results.data.length > 0) {
-                        rawParsedData = results.data;
-                        processRawMatrix(rawParsedData);
-                        initDashboard();
-                        showStatus('Berhasil mengambil data dari sheet NTE BARU!', 'success');
-                        setTimeout(() => document.getElementById('status-message').classList.add('hidden'), 3000);
-                    } else {
-                        showStatus('Data kosong dari URL Publish.', 'error');
-                    }
-                },
-                error: function(err) {
-                    showStatus('Gagal membaca data dari link Publish Web.', 'error');
-                }
+        // Fetch CSV when window loaded
+        window.onload = function() {
+            fetchCSVData();
+            document.getElementById('districtFilter').addEventListener('change', function(e) {
+                selectedDistrict = e.target.value;
+                processAndRenderData();
             });
+        };
+
+        // Robust CSV Parser handling quotes and commas inside cells
+        function parseCSV(text) {
+            const lines = [];
+            let row = [];
+            let inQuotes = false;
+            let currentToken = '';
+
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                const nextC = text[i+1];
+
+                if (c === '"') {
+                    if (inQuotes && nextC === '"') {
+                        currentToken += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (c === ',' && !inQuotes) {
+                    row.push(currentToken.trim());
+                    currentToken = '';
+                } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                    if (c === '\r' && nextC === '\n') {
+                        i++;
+                    }
+                    row.push(currentToken.trim());
+                    lines.push(row);
+                    row = [];
+                    currentToken = '';
+                } else {
+                    currentToken += c;
+                }
+            }
+            if (currentToken !== '' || row.length > 0) {
+                row.push(currentToken.trim());
+                lines.push(row);
+            }
+            return lines;
         }
 
-        // Fungsi fleksibel membaca baris/kolom tabel NTE BARU
-        function processRawMatrix(rows) {
-            normalizedData = [];
-            
-            let witelCol = -1, jenisCol = -1, merkCol = -1, typeCol = -1, qtyCol = -1;
-            let headerRowIndex = -1;
+        // Fetch CSV from URL
+        async function fetchCSVData() {
+            showLoading(true);
+            showStatus('Mengambil data dari Google Sheets...', 'info');
 
-            // 1. Cari baris header
-            for (let i = 0; i < Math.min(15, rows.length); i++) {
-                const rowUpper = rows[i].map(cell => (cell || '').toString().toUpperCase().trim());
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.classList.add('fa-spin');
+
+            try {
+                // Add timestamp to prevent caching
+                const cacheBustUrl = CSV_URL + '&_t=' + new Date().getTime();
+                const response = await fetch(cacheBustUrl);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+
+                const csvText = await response.text();
+                const matrix = parseCSV(csvText);
+
+                if (!matrix || matrix.length < 3) {
+                    throw new Error("Format CSV tidak sesuai atau data kosong.");
+                }
+
+                parseStructure(matrix);
+                populateDistrictDropdown();
+                processAndRenderData();
                 
-                rowUpper.forEach((val, colIdx) => {
-                    if (val.includes('WITEL') || val.includes('DISTRIK') || val.includes('REGIONAL')) witelCol = colIdx;
-                    if (val.includes('MODEL') || val.includes('JENIS') || val.includes('KATEGORI')) jenisCol = colIdx;
-                    if (val.includes('MERK') || val.includes('BRAND')) merkCol = colIdx;
-                    if (val.includes('TYPE') || val.includes('TIPE')) typeCol = colIdx;
-                    if (val.includes('QTY') || val.includes('JUMLAH') || val.includes('STOCK')) qtyCol = colIdx;
-                });
+                showStatus('Data berhasil diperbarui!', 'success');
+            } catch (err) {
+                console.error(err);
+                showStatus('Gagal memuat data: ' + err.message, 'error');
+            } finally {
+                showLoading(false);
+                refreshIcon.classList.remove('fa-spin');
+            }
+        }
 
-                if (witelCol !== -1 || qtyCol !== -1 || merkCol !== -1) {
-                    headerRowIndex = i;
-                    break;
+        // Parse structure specific to this sheet layout
+        // Row 0: Jenis ONT (Start Column B / Index 1)
+        // Row 1: Type ONT (Start Column B / Index 1)
+        // Row 2+: Column A = Distrik Name, Column B... = Quantities
+        function parseStructure(matrix) {
+            const rowJenis = matrix[0] || [];
+            const rowType = matrix[1] || [];
+
+            parsedHeaders = [];
+            districtRows = [];
+
+            // Identify column structure starting from Column B (index 1)
+            let currentJenis = '';
+            const maxCols = Math.max(rowJenis.length, rowType.length);
+
+            for (let c = 1; c < maxCols; c++) {
+                const jVal = rowJenis[c] ? rowJenis[c].trim() : '';
+                const tVal = rowType[c] ? rowType[c].trim() : '';
+
+                // Forward fill Jenis if merged header
+                if (jVal !== '') {
+                    currentJenis = jVal;
+                }
+
+                if (tVal !== '' || currentJenis !== '') {
+                    parsedHeaders.push({
+                        colIndex: c,
+                        jenis: currentJenis || 'Lain-lain',
+                        type: tVal || 'Standard'
+                    });
                 }
             }
 
-            // Jika header tidak ditemukan otomatis, gunakan index standar kolom CSV
-            if (witelCol === -1) witelCol = 0;
-            if (jenisCol === -1) jenisCol = 1;
-            if (merkCol === -1) merkCol = 2;
-            if (typeCol === -1) typeCol = 3;
-            if (qtyCol === -1) qtyCol = 4;
-
-            // 2. Ambil data baris
-            const startIdx = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
-            for (let i = startIdx; i < rows.length; i++) {
-                const row = rows[i];
+            // Extract District Data Rows
+            for (let r = 2; r < matrix.length; r++) {
+                const row = matrix[r];
                 if (!row || row.length === 0) continue;
 
-                const witel = (row[witelCol] || '').trim();
-                const jenis = (row[jenisCol] || '').trim();
-                const merk = (row[merkCol] || '').trim();
-                const type = (row[typeCol] || '').trim();
-                const rawQty = (row[qtyCol] || '0').toString().replace(/[^0-9.-]/g, '');
-                const qty = parseFloat(rawQty) || 0;
-
-                // Salin data jika ada distrik/witel atau qty > 0
-                if (witel || merk || qty > 0) {
-                    normalizedData.push({ witel, jenis, merk, type, qty });
+                const distName = row[0] ? row[0].trim() : '';
+                
+                // Skip empty district or total rows if any
+                if (!distName || distName.toLowerCase().includes('total') || distName.toLowerCase() === 'grand total') {
+                    continue;
                 }
-            }
-        }
 
-        function initDashboard() {
-            populateDropdowns();
-            render();
-        }
+                const counts = [];
+                parsedHeaders.forEach(h => {
+                    const cellVal = row[h.colIndex];
+                    let val = parseInt(cellVal, 10);
+                    if (isNaN(val)) val = 0;
+                    counts.push(val);
+                });
 
-        function populateDropdowns() {
-            const witels = [...new Set(normalizedData.map(d => d.witel).filter(Boolean))].sort();
-            const merks = [...new Set(normalizedData.map(d => d.merk).filter(Boolean))].sort();
-
-            const selectWitel = document.getElementById('filter-witel');
-            selectWitel.innerHTML = '<option value="ALL">Semua Witel / Distrik</option>';
-            witels.forEach(w => {
-                selectWitel.innerHTML += `<option value="${w}">${w}</option>`;
-            });
-
-            const selectMerk = document.getElementById('filter-merk');
-            selectMerk.innerHTML = '<option value="ALL">Semua Merk</option>';
-            merks.forEach(m => {
-                selectMerk.innerHTML += `<option value="${m}">${m}</option>`;
-            });
-
-            selectWitel.onchange = render;
-            selectMerk.onchange = render;
-        }
-
-        function render() {
-            const selectedWitel = document.getElementById('filter-witel').value;
-            const selectedMerk = document.getElementById('filter-merk').value;
-
-            const filtered = normalizedData.filter(item => {
-                const witelMatch = (selectedWitel === 'ALL' || item.witel === selectedWitel);
-                const merkMatch = (selectedMerk === 'ALL' || item.merk === selectedMerk);
-                return witelMatch && merkMatch;
-            });
-
-            let totalStock = 0;
-            let dualBand = 0;
-            let premium = 0;
-            let bigOnt = 0;
-
-            const witelMap = {};
-            const tipeMap = {};
-
-            filtered.forEach(item => {
-                const qty = item.qty;
-                const jenisUpper = (item.jenis || '').toUpperCase();
-                const witel = item.witel || 'LAINNYA';
-                const labelTipe = item.type || item.merk || 'LAINNYA';
-
-                totalStock += qty;
-
-                if (jenisUpper.includes('DUAL BAND') || jenisUpper.includes('DUALBAND')) dualBand += qty;
-                else if (jenisUpper.includes('PREMIUM')) premium += qty;
-                else if (jenisUpper.includes('BIG ONT') || jenisUpper.includes('BIGONT')) bigOnt += qty;
-
-                witelMap[witel] = (witelMap[witel] || 0) + qty;
-                tipeMap[labelTipe] = (tipeMap[labelTipe] || 0) + qty;
-            });
-
-            document.getElementById('total-stock').innerText = totalStock.toLocaleString('id-ID');
-            document.getElementById('total-dualband').innerText = dualBand.toLocaleString('id-ID');
-            document.getElementById('total-premium').innerText = premium.toLocaleString('id-ID');
-            document.getElementById('total-bigont').innerText = bigOnt.toLocaleString('id-ID');
-
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '';
-            
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Data tidak ditemukan.</td></tr>`;
-            } else {
-                filtered.slice(0, 150).forEach(item => {
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-2 font-medium">${item.witel || '-'}</td>
-                            <td class="px-4 py-2">${item.jenis || '-'}</td>
-                            <td class="px-4 py-2 font-semibold">${item.merk || '-'}</td>
-                            <td class="px-4 py-2">${item.type || '-'}</td>
-                            <td class="px-4 py-2 text-right font-bold text-blue-700">${item.qty.toLocaleString('id-ID')}</td>
-                        </tr>
-                    `;
+                districtRows.push({
+                    districtName: distName,
+                    counts: counts
                 });
             }
-
-            renderCharts(witelMap, tipeMap);
         }
 
-        function renderCharts(witelMap, tipeMap) {
-            const ctxWitel = document.getElementById('chartWitel').getContext('2d');
-            if (chartWitelInstance) chartWitelInstance.destroy();
-            chartWitelInstance = new Chart(ctxWitel, {
-                type: 'bar',
+        // Fill Dropdown Distrik Options
+        function populateDistrictDropdown() {
+            const select = document.getElementById('districtFilter');
+            select.innerHTML = '<option value="ALL">Semua Distrik (All Distrik)</option>';
+
+            const districts = districtRows.map(d => d.districtName).sort();
+            districts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                select.appendChild(opt);
+            });
+
+            select.value = selectedDistrict;
+        }
+
+        // Main Calculation and UI Rendering
+        function processAndRenderData() {
+            // Filter Rows
+            const filteredRows = selectedDistrict === 'ALL' 
+                ? districtRows 
+                : districtRows.filter(d => d.districtName.toLowerCase() === selectedDistrict.toLowerCase());
+
+            // Aggregation Objects
+            const jenisTotals = {};
+            const typeTotals = {};
+            let grandTotal = 0;
+
+            // Initialize Headers
+            parsedHeaders.forEach(h => {
+                if (!jenisTotals[h.jenis]) jenisTotals[h.jenis] = 0;
+                const typeKey = `${h.jenis} - ${h.type}`;
+                if (!typeTotals[typeKey]) typeTotals[typeKey] = { jenis: h.jenis, type: h.type, total: 0 };
+            });
+
+            // Calculate Sums
+            filteredRows.forEach(r => {
+                r.counts.forEach((val, idx) => {
+                    const header = parsedHeaders[idx];
+                    if (header) {
+                        jenisTotals[header.jenis] = (jenisTotals[header.jenis] || 0) + val;
+                        const typeKey = `${header.jenis} - ${header.type}`;
+                        if (typeTotals[typeKey]) {
+                            typeTotals[typeKey].total += val;
+                        }
+                        grandTotal += val;
+                    }
+                });
+            });
+
+            // KPI Updates
+            renderKPIs(grandTotal, filteredRows.length, jenisTotals, typeTotals);
+
+            // Render Charts
+            renderCharts(jenisTotals, typeTotals);
+
+            // Render Summary Tables
+            renderSummaryTables(jenisTotals, typeTotals, grandTotal);
+
+            // Render Detailed Matrix Table
+            renderMatrixTable();
+        }
+
+        // Render Cards Info
+        function renderKPIs(totalStok, totalDistrik, jenisTotals, typeTotals) {
+            document.getElementById('kpiTotalStok').textContent = totalStok.toLocaleString('id-ID');
+            document.getElementById('kpiTotalDistrik').textContent = totalDistrik;
+            document.getElementById('kpiDistrikSubText').textContent = selectedDistrict === 'ALL' ? 'Seluruh area terpantau' : 'Distrik terpilih';
+
+            // Top Jenis
+            let topJenis = '-';
+            let topJenisVal = 0;
+            Object.entries(jenisTotals).forEach(([k, v]) => {
+                if (v > topJenisVal) {
+                    topJenisVal = v;
+                    topJenis = k;
+                }
+            });
+            document.getElementById('kpiTopJenis').textContent = topJenis;
+            document.getElementById('kpiTopJenisVal').textContent = `${topJenisVal.toLocaleString('id-ID')} unit`;
+
+            // Top Type
+            let topType = '-';
+            let topTypeVal = 0;
+            Object.values(typeTotals).forEach(item => {
+                if (item.total > topTypeVal) {
+                    topTypeVal = item.total;
+                    topType = item.type;
+                }
+            });
+            document.getElementById('kpiTopType').textContent = topType;
+            document.getElementById('kpiTopTypeVal').textContent = `${topTypeVal.toLocaleString('id-ID')} unit`;
+        }
+
+        // Render Charts using Chart.js
+        function renderCharts(jenisTotals, typeTotals) {
+            // Chart 1: Donut Chart per Jenis ONT
+            const jenisLabels = Object.keys(jenisTotals);
+            const jenisData = Object.values(jenisTotals);
+
+            const ctxJenis = document.getElementById('jenisChart').getContext('2d');
+            if (jenisChartInstance) jenisChartInstance.destroy();
+
+            jenisChartInstance = new Chart(ctxJenis, {
+                type: 'doughnut',
                 data: {
-                    labels: Object.keys(witelMap),
+                    labels: jenisLabels,
                     datasets: [{
-                        label: 'Total QTY',
-                        data: Object.values(witelMap),
-                        backgroundColor: '#3B82F6'
+                        data: jenisData,
+                        backgroundColor: chartColors.slice(0, jenisLabels.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${val.toLocaleString('id-ID')} unit (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
                 }
             });
 
-            const ctxTipe = document.getElementById('chartTipe').getContext('2d');
-            if (chartTipeInstance) chartTipeInstance.destroy();
-            
-            const sortedTipe = Object.entries(tipeMap).sort((a,b) => b[1] - a[1]).slice(0, 7);
+            // Chart 2: Bar Chart per Type ONT
+            const typeList = Object.values(typeTotals).filter(t => t.total > 0 || selectedDistrict === 'ALL');
+            // Sort by total descending
+            typeList.sort((a, b) => b.total - a.total);
 
-            chartTipeInstance = new Chart(ctxTipe, {
-                type: 'doughnut',
+            const typeLabels = typeList.map(t => `${t.type}`);
+            const typeData = typeList.map(t => t.total);
+
+            const ctxType = document.getElementById('typeChart').getContext('2d');
+            if (typeChartInstance) typeChartInstance.destroy();
+
+            typeChartInstance = new Chart(ctxType, {
+                type: 'bar',
                 data: {
-                    labels: sortedTipe.map(t => t[0]),
+                    labels: typeLabels,
                     datasets: [{
-                        data: sortedTipe.map(t => t[1]),
-                        backgroundColor: ['#10B981', '#6366F1', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4']
+                        label: 'Jumlah Unit',
+                        data: typeData,
+                        backgroundColor: '#6366f1',
+                        borderRadius: 6,
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `Stok: ${ctx.raw.toLocaleString('id-ID')} unit`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10, family: 'Inter' } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { font: { size: 10, family: 'Inter' } }
+                        }
+                    }
                 }
             });
         }
 
-        document.addEventListener('DOMContentLoaded', loadData);
+        // Render Summary Tables for Jenis & Type
+        function renderSummaryTables(jenisTotals, typeTotals, grandTotal) {
+            // Table Jenis
+            const jenisTbody = document.getElementById('jenisTableBody');
+            jenisTbody.innerHTML = '';
+            
+            const sortedJenis = Object.entries(jenisTotals).sort((a,b) => b[1] - a[1]);
+            document.getElementById('badgeTotalJenis').textContent = `${sortedJenis.length} Jenis`;
+
+            sortedJenis.forEach(([jenis, count]) => {
+                const pct = grandTotal > 0 ? ((count / grandTotal) * 100).toFixed(1) : 0;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-slate-700">${jenis}</td>
+                    <td class="p-3 text-right font-bold text-slate-800">${count.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right text-slate-500">${pct}%</td>
+                `;
+                jenisTbody.appendChild(tr);
+            });
+
+            // Table Type
+            const typeTbody = document.getElementById('typeTableBody');
+            typeTbody.innerHTML = '';
+
+            const sortedTypes = Object.values(typeTotals).sort((a,b) => b.total - a.total);
+            document.getElementById('badgeTotalType').textContent = `${sortedTypes.length} Type`;
+
+            sortedTypes.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-500">${item.jenis}</td>
+                    <td class="p-3 font-semibold text-slate-700">${item.type}</td>
+                    <td class="p-3 text-right font-bold text-slate-800">${item.total.toLocaleString('id-ID')}</td>
+                `;
+                typeTbody.appendChild(tr);
+            });
+        }
+
+        // Render Detailed Matrix Grid Table
+        function renderMatrixTable() {
+            const table = document.getElementById('matrixTable');
+            const searchKeyword = (document.getElementById('tableSearch').value || '').toLowerCase();
+
+            // Filter Districts
+            let rowsToRender = selectedDistrict === 'ALL'
+                ? districtRows
+                : districtRows.filter(d => d.districtName.toLowerCase() === selectedDistrict.toLowerCase());
+
+            if (searchKeyword) {
+                rowsToRender = rowsToRender.filter(r => r.districtName.toLowerCase().includes(searchKeyword));
+            }
+
+            // Build Header HTML
+            let headerHTML = `
+                <thead>
+                    <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+                        <th class="p-3 sticky left-0 bg-slate-100 z-10 min-w-[140px] border-r">Distrik</th>
+            `;
+
+            parsedHeaders.forEach(h => {
+                headerHTML += `
+                    <th class="p-2 text-center border-r min-w-[100px]">
+                        <span class="block text-[10px] uppercase text-slate-400 font-bold">${h.jenis}</span>
+                        <span class="block font-semibold text-slate-800">${h.type}</span>
+                    </th>
+                `;
+            });
+
+            headerHTML += `
+                        <th class="p-3 text-right bg-slate-200 text-slate-800 min-w-[90px]">Total</th>
+                    </tr>
+                </thead>
+            `;
+
+            // Build Body HTML
+            let bodyHTML = '<tbody class="divide-y divide-slate-100">';
+            
+            if (rowsToRender.length === 0) {
+                bodyHTML += `
+                    <tr>
+                        <td colspan="${parsedHeaders.length + 2}" class="p-6 text-center text-slate-400">Tidak ada data distrik ditemukan.</td>
+                    </tr>
+                `;
+            } else {
+                rowsToRender.forEach(r => {
+                    let rowSum = 0;
+                    bodyHTML += `<tr class="hover:bg-slate-50 transition">`;
+                    bodyHTML += `<td class="p-3 font-semibold text-slate-700 sticky left-0 bg-white border-r">${r.districtName}</td>`;
+                    
+                    r.counts.forEach(cnt => {
+                        rowSum += cnt;
+                        const cellStyle = cnt > 0 ? 'text-slate-800 font-medium' : 'text-slate-300';
+                        bodyHTML += `<td class="p-2 text-center border-r ${cellStyle}">${cnt > 0 ? cnt.toLocaleString('id-ID') : '-'}</td>`;
+                    });
+
+                    bodyHTML += `<td class="p-3 text-right font-bold text-red-600 bg-slate-50">${rowSum.toLocaleString('id-ID')}</td>`;
+                    bodyHTML += `</tr>`;
+                });
+            }
+
+            bodyHTML += '</tbody>';
+            table.innerHTML = headerHTML + bodyHTML;
+        }
+
+        // Show/Hide Skeleton & Main UI Elements
+        function showLoading(isLoading) {
+            const loader = document.getElementById('loadingState');
+            const kpi = document.getElementById('kpiSection');
+            const chart = document.getElementById('chartSection');
+            const tables = document.getElementById('tablesSection');
+            const fullData = document.getElementById('fullDataSection');
+
+            if (isLoading) {
+                loader.classList.remove('hidden');
+                kpi.classList.add('hidden');
+                chart.classList.add('hidden');
+                tables.classList.add('hidden');
+                fullData.classList.add('hidden');
+            } else {
+                loader.classList.add('hidden');
+                kpi.classList.remove('hidden');
+                chart.classList.remove('hidden');
+                tables.classList.remove('hidden');
+                fullData.classList.remove('hidden');
+            }
+        }
+
+        // Display Banner Message
+        function showStatus(msg, type = 'info') {
+            const alert = document.getElementById('statusAlert');
+            const icon = document.getElementById('statusIcon');
+            const message = document.getElementById('statusMessage');
+
+            alert.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'bg-red-50', 'text-red-800', 'border-red-200', 'bg-blue-50', 'text-blue-800', 'border-blue-200');
+
+            if (type === 'success') {
+                alert.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+                icon.className = 'fa-solid fa-circle-check text-emerald-600';
+            } else if (type === 'error') {
+                alert.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
+                icon.className = 'fa-solid fa-circle-exclamation text-red-600';
+            } else {
+                alert.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-200');
+                icon.className = 'fa-solid fa-circle-info text-blue-600';
+            }
+
+            message.textContent = msg;
+        }
     </script>
 </body>
 </html>
