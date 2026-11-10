@@ -428,19 +428,24 @@
             parsedHeaders = [];
             districtRows = [];
 
-            // Ekstrak Informasi Tanggal Update (Kolom A Baris 22 / Indeks Baris 21)
+            // Ekstrak Informasi Tanggal Update dari KOLOM B BARIS 22 (Indeks Baris 21, Kolom 1)
             let updateDateStr = '';
-            if (matrix.length >= 22 && matrix[21] && matrix[21][0]) {
-                updateDateStr = matrix[21][0].trim();
+            if (matrix.length >= 22 && matrix[21] && matrix[21][1]) {
+                updateDateStr = matrix[21][1].trim();
             } else {
-                // Fallback pencarian di seluruh sel kolom A yang mengandung tanggal / "update"
-                for (let i = 2; i < matrix.length; i++) {
-                    const cellVal = matrix[i][0] ? matrix[i][0].trim() : '';
-                    if (cellVal.toLowerCase().includes('update') || cellVal.toLowerCase().includes('tanggal') || cellVal.toLowerCase().includes('tgl')) {
+                // Fallback pencarian fleksibel jika letak baris bergeser
+                for (let i = 0; i < matrix.length; i++) {
+                    const cellVal = matrix[i][1] ? matrix[i][1].trim() : '';
+                    if (cellVal && (cellVal.toLowerCase().includes('update') || cellVal.toLowerCase().includes('tanggal') || cellVal.toLowerCase().includes('tgl') || /\d/.test(cellVal))) {
                         updateDateStr = cellVal;
                         break;
                     }
                 }
+            }
+
+            // Bersihkan awalan kata "Update" atau "Update :" dari teks agar tidak duplikat
+            if (updateDateStr) {
+                updateDateStr = updateDateStr.replace(/^update\s*:?\s*/i, '').trim();
             }
 
             const updateElem = document.getElementById('updateDateText');
