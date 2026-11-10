@@ -1,116 +1,7 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Real-time Stock NTE Baru</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- PapaParse untuk parsing CSV tangguh -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-</head>
-<body class="bg-gray-100 text-gray-800">
-
-    <!-- Header -->
-    <header class="bg-blue-700 text-white p-5 shadow-lg flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
-            </svg>
-            <h1 class="text-2xl font-bold">Dashboard Real-time Stock NTE Baru</h1>
-        </div>
-        <span class="bg-blue-800 text-sm px-3 py-1 rounded-full border border-blue-400">Sheet: MONITORING NTE REG 3</span>
-    </header>
-
-    <div class="container mx-auto p-6 space-y-6">
-
-        <!-- Status/Error Notification -->
-        <div id="status-message" class="hidden p-4 rounded-lg text-sm font-semibold"></div>
-
-        <!-- Metric Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-blue-600">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">TOTAL STOCK NTE BARU</p>
-                <h3 id="total-stock" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
-            </div>
-            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-emerald-500">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ONT DUAL BAND</p>
-                <h3 id="total-dualband" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
-            </div>
-            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-indigo-500">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">ONT PREMIUM</p>
-                <h3 id="total-premium" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
-            </div>
-            <div class="bg-white p-5 rounded-lg shadow border-l-4 border-amber-500">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">BIG ONT</p>
-                <h3 id="total-bigont" class="text-3xl font-extrabold mt-2 text-gray-800">0</h3>
-            </div>
-        </div>
-
-        <!-- Filter Bar -->
-        <div class="bg-white p-4 rounded-lg shadow flex flex-wrap gap-4 items-center">
-            <div class="flex items-center space-x-2">
-                <label for="filter-witel" class="font-semibold text-gray-700 text-sm">Filter Distrik / Witel:</label>
-                <select id="filter-witel" class="border border-gray-300 rounded-md px-3 py-1.5 bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="ALL">Semua Witel / Distrik</option>
-                </select>
-            </div>
-            <div class="flex items-center space-x-2">
-                <label for="filter-merk" class="font-semibold text-gray-700 text-sm">Filter Merk:</label>
-                <select id="filter-merk" class="border border-gray-300 rounded-md px-3 py-1.5 bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="ALL">Semua Merk</option>
-                </select>
-            </div>
-            <button onclick="loadData()" class="ml-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-1.5 rounded-md transition duration-150">
-                🔄 Refresh Data
-            </button>
-        </div>
-
-        <!-- Visual Chart Section -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-5 rounded-lg shadow">
-                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Distribusi Stock per Distrik / Witel</h4>
-                <div class="h-64">
-                    <canvas id="chartWitel"></canvas>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-lg shadow">
-                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Distribusi Tipe ONT / Kategori</h4>
-                <div class="h-64">
-                    <canvas id="chartTipe"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Data Table -->
-        <div class="bg-white p-5 rounded-lg shadow overflow-x-auto">
-            <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Rincian Detail Stock</h4>
-            <table class="min-w-full divide-y divide-gray-200 text-sm">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">WITEL / DISTRIK</th>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">STATUS STOCK</th>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">JENIS / KATEGORI</th>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">MERK</th>
-                        <th class="px-4 py-2 text-left font-semibold text-gray-600">TYPE ONT</th>
-                        <th class="px-4 py-2 text-right font-semibold text-gray-600">QTY</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body" class="divide-y divide-gray-200">
-                    <tr>
-                        <td colspan="6" class="text-center py-6 text-gray-500">Memuat data dari Google Sheets...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-    </div>
-
-    <script>
+<script>
         const sheetID = '1OejhaFCnEhLa8mgkh61QJ7Qk3jNp4PcD2jh96luGbVU';
-        const sheetName = 'DATA STOCK HARI INI';
+        // Ubah langsung ke sheet "NTE BARU" sesuai permintaan Anda
+        const sheetName = 'NTE BARU';
         
         let allData = [];
         let chartWitelInstance = null;
@@ -126,30 +17,11 @@
         }
 
         async function loadData() {
-            showStatus('Sedang mengambil data terbaru...', 'info');
+            showStatus('Mengambil data khusus sheet NTE BARU...', 'info');
             
-            // Method 1: Coba via Viz Query API (Aman dari CORS file://)
-            const jsonpUrl = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
-            
-            try {
-                const res = await fetch(jsonpUrl);
-                const text = await res.text();
-                // Extract JSON dari wrapper Google gviz
-                const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
-                
-                if (jsonMatch && jsonMatch[1]) {
-                    const parsedJson = JSON.parse(jsonMatch[1]);
-                    parseGvizData(parsedJson);
-                    showStatus('Data berhasil terhubung!', 'success');
-                    setTimeout(() => document.getElementById('status-message').classList.add('hidden'), 3000);
-                    return;
-                }
-            } catch (err) {
-                console.warn('Gviz fetch gagal, mencoba CSV Fallback...', err);
-            }
-
-            // Method 2: CSV Fallback lewat PapaParse
+            // Mengambil data spesifik dari Sheet "NTE BARU"
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+            
             Papa.parse(csvUrl, {
                 download: true,
                 header: true,
@@ -158,32 +30,16 @@
                     if (results.data && results.data.length > 0) {
                         allData = results.data;
                         initDashboard();
-                        showStatus('Data berhasil dimuat via CSV!', 'success');
+                        showStatus('Data sheet NTE BARU berhasil dimuat!', 'success');
                         setTimeout(() => document.getElementById('status-message').classList.add('hidden'), 3000);
                     } else {
-                        showStatus('Gagal memuat data: Format data kosong atau tidak valid.', 'error');
+                        showStatus('Gagal memuat data: Sheet NTE BARU kosong atau nama sheet tidak sesuai.', 'error');
                     }
                 },
                 error: function(err) {
-                    showStatus('Gagal terhubung ke Google Sheets. Pastikan Spreadsheet diset "Anyone with the link can view".', 'error');
+                    showStatus('Gagal terhubung ke Google Sheets. Pastikan akses link bersifat publik.', 'error');
                 }
             });
-        }
-
-        function parseGvizData(gviz) {
-            const cols = gviz.table.cols.map(c => c ? c.label : '');
-            const rows = gviz.table.rows;
-            
-            allData = rows.map(r => {
-                let obj = {};
-                r.c.forEach((cell, idx) => {
-                    const colName = cols[idx] || `col_${idx}`;
-                    obj[colName] = cell ? (cell.v !== null ? cell.v : '') : '';
-                });
-                return obj;
-            });
-
-            initDashboard();
         }
 
         function initDashboard() {
@@ -192,8 +48,8 @@
         }
 
         function populateDropdowns() {
-            const witels = [...new Set(allData.map(d => d['WITEL']).filter(Boolean))].sort();
-            const merks = [...new Set(allData.map(d => d['MERK']).filter(Boolean))].sort();
+            const witels = [...new Set(allData.map(d => d['WITEL'] || d['DISTRIK'])).filter(Boolean)].sort();
+            const merks = [...new Set(allData.map(d => d['MERK'])).filter(Boolean)].sort();
 
             const selectWitel = document.getElementById('filter-witel');
             selectWitel.innerHTML = '<option value="ALL">Semua Witel / Distrik</option>';
@@ -215,19 +71,14 @@
             const selectedWitel = document.getElementById('filter-witel').value;
             const selectedMerk = document.getElementById('filter-merk').value;
 
-            // Filter data khusus "NTE BARU" (atau sesuai filter dropdown)
+            // Karena file sudah spesifik sheet NTE BARU, tampilkan semua baris yang ada di sheet tersebut
             const filtered = allData.filter(item => {
-                const witelMatch = (selectedWitel === 'ALL' || item['WITEL'] === selectedWitel);
+                const witelVal = item['WITEL'] || item['DISTRIK'] || '';
+                const witelMatch = (selectedWitel === 'ALL' || witelVal === selectedWitel);
                 const merkMatch = (selectedMerk === 'ALL' || item['MERK'] === selectedMerk);
-                
-                // Cek status stock jika ada kolom STATUS STOCK
-                const statusStock = (item['STATUS STOCK'] || '').toString().toUpperCase();
-                const isNteBaru = statusStock === '' || statusStock.includes('NTE BARU');
-
-                return witelMatch && merkMatch && isNteBaru;
+                return witelMatch && merkMatch;
             });
 
-            // Calculate Totals
             let totalStock = 0;
             let dualBand = 0;
             let premium = 0;
@@ -237,9 +88,9 @@
             const tipeMap = {};
 
             filtered.forEach(item => {
-                const qty = parseFloat(item['QTY']) || 0;
-                const jenis = (item['JENIS'] || item['KATEGORI'] || '').toString().toUpperCase();
-                const witel = item['WITEL'] || 'UNKNOWN';
+                const qty = parseFloat(item['QTY'] || item['JUMLAH']) || 0;
+                const jenis = (item['JENIS'] || item['KATEGORI'] || item['MODEL'] || '').toString().toUpperCase();
+                const witel = item['WITEL'] || item['DISTRIK'] || 'UNKNOWN';
                 const tipe = item['TYPE'] || item['MERK'] || 'UNKNOWN';
 
                 totalStock += qty;
@@ -248,7 +99,6 @@
                 else if (jenis.includes('PREMIUM')) premium += qty;
                 else if (jenis.includes('BIG ONT') || jenis.includes('BIGONT')) bigOnt += qty;
 
-                // Groupings for Charts
                 witelMap[witel] = (witelMap[witel] || 0) + qty;
                 tipeMap[tipe] = (tipeMap[tipe] || 0) + qty;
             });
@@ -264,14 +114,14 @@
             tbody.innerHTML = '';
             
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Tidak ada data yang cocok.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Tidak ada data di sheet NTE BARU.</td></tr>`;
             } else {
                 filtered.slice(0, 100).forEach(item => {
-                    const qty = parseFloat(item['QTY']) || 0;
+                    const qty = parseFloat(item['QTY'] || item['JUMLAH']) || 0;
                     tbody.innerHTML += `
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-2 font-medium">${item['WITEL'] || '-'}</td>
-                            <td class="px-4 py-2"><span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-semibold">${item['STATUS STOCK'] || 'NTE BARU'}</span></td>
+                            <td class="px-4 py-2 font-medium">${item['WITEL'] || item['DISTRIK'] || '-'}</td>
+                            <td class="px-4 py-2"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded font-semibold">NTE BARU</span></td>
                             <td class="px-4 py-2">${item['JENIS'] || item['KATEGORI'] || '-'}</td>
                             <td class="px-4 py-2 font-semibold">${item['MERK'] || '-'}</td>
                             <td class="px-4 py-2">${item['TYPE'] || '-'}</td>
@@ -281,12 +131,10 @@
                 });
             }
 
-            // Render Charts
             renderCharts(witelMap, tipeMap);
         }
 
         function renderCharts(witelMap, tipeMap) {
-            // Chart Witel
             const ctxWitel = document.getElementById('chartWitel').getContext('2d');
             if (chartWitelInstance) chartWitelInstance.destroy();
             chartWitelInstance = new Chart(ctxWitel, {
@@ -306,11 +154,9 @@
                 }
             });
 
-            // Chart Tipe/Merk
             const ctxTipe = document.getElementById('chartTipe').getContext('2d');
             if (chartTipeInstance) chartTipeInstance.destroy();
             
-            // Limit 7 tipe terbanyak untuk tampilan ringkas
             const sortedTipe = Object.entries(tipeMap).sort((a,b) => b[1] - a[1]).slice(0, 7);
 
             chartTipeInstance = new Chart(ctxTipe, {
@@ -329,8 +175,5 @@
             });
         }
 
-        // Run on load
         document.addEventListener('DOMContentLoaded', loadData);
     </script>
-</body>
-</html>
