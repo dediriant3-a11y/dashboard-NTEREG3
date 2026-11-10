@@ -46,17 +46,23 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold tracking-tight">Dashboard Stok ONT</h1>
-                    <p id="subCategoryTitle" class="text-xs text-red-100 flex items-center gap-1.5 mt-0.5">
-                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        REPORT NTE BARU (Live Data Sync)
-                    </p>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-red-100 mt-0.5">
+                        <p id="subCategoryTitle" class="flex items-center gap-1.5">
+                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            REPORT NTE BARU (Live Data Sync)
+                        </p>
+                        <!-- Keterangan Tanggal Update dari Kolom A Baris 22 -->
+                        <span id="lastUpdateInfo" class="hidden sm:inline text-red-200 font-medium bg-white/10 px-2 py-0.5 rounded text-[11px] border border-white/10">
+                            <i class="fa-regular fa-calendar-check mr-1"></i><span id="updateDateText">memuat...</span>
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Controls (Category, District Filter & Reload) -->
+            <!-- Controls (Category, District Filter, Open GDoc & Reload) -->
             <div class="flex items-center flex-wrap gap-3 w-full sm:w-auto">
                 <!-- Dropdown Kategori Sheet -->
-                <div class="relative flex-1 sm:w-52">
+                <div class="relative flex-1 sm:w-44">
                     <i class="fa-solid fa-layer-group absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     <select id="categoryFilter" class="w-full pl-9 pr-8 py-2 bg-white text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer transition">
                         <option value="BARU">NTE BARU</option>
@@ -66,12 +72,18 @@
                 </div>
 
                 <!-- Dropdown Filter Distrik -->
-                <div class="relative flex-1 sm:w-56">
+                <div class="relative flex-1 sm:w-48">
                     <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     <select id="districtFilter" class="w-full pl-9 pr-8 py-2 bg-white text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer transition">
                         <option value="ALL">Semua Distrik (All Distrik)</option>
                     </select>
                 </div>
+
+                <!-- Tombol Buka Link GDoc / GSheet -->
+                <a href="https://docs.google.com/spreadsheets/d/1OejhaFCnEhLa8mgkh61QJ7Qk3jNp4PcD2jh96luGbVU/edit?gid=1068491274#gid=1068491274" target="_blank" rel="noopener noreferrer" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-lg shadow-sm transition flex items-center justify-center gap-2 border border-emerald-400 active:scale-95" title="Buka Google Sheet Sumber">
+                    <i class="fa-solid fa-file-excel text-sm"></i>
+                    <span class="hidden md:inline">Buka Sheet</span>
+                </a>
 
                 <button id="refreshBtn" onclick="fetchCSVData()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-lg backdrop-blur-md transition flex items-center justify-center gap-2 border border-white/20 active:scale-95">
                     <i id="refreshIcon" class="fa-solid fa-rotate text-xs"></i>
@@ -415,6 +427,28 @@
 
             parsedHeaders = [];
             districtRows = [];
+
+            // Ekstrak Informasi Tanggal Update (Kolom A Baris 22 / Indeks Baris 21)
+            let updateDateStr = '';
+            if (matrix.length >= 22 && matrix[21] && matrix[21][0]) {
+                updateDateStr = matrix[21][0].trim();
+            } else {
+                // Fallback pencarian di seluruh sel kolom A yang mengandung tanggal / "update"
+                for (let i = 2; i < matrix.length; i++) {
+                    const cellVal = matrix[i][0] ? matrix[i][0].trim() : '';
+                    if (cellVal.toLowerCase().includes('update') || cellVal.toLowerCase().includes('tanggal') || cellVal.toLowerCase().includes('tgl')) {
+                        updateDateStr = cellVal;
+                        break;
+                    }
+                }
+            }
+
+            const updateElem = document.getElementById('updateDateText');
+            if (updateDateStr) {
+                updateElem.textContent = updateDateStr;
+            } else {
+                updateElem.textContent = 'Tidak terdeteksi';
+            }
 
             let currentJenis = '';
             const maxCols = Math.max(rowJenis.length, rowType.length);
