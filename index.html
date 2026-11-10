@@ -253,11 +253,11 @@
 
     <!-- JavaScript Data Logic -->
     <script>
-        // Mapping URL Sheet sesuai Kategori
+        // Mapping URL Sheet sesuai Kategori dengan GID Masing-Masing Sheet
         const SHEET_URLS = {
             BARU: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1068491274&single=true&output=csv',
-            DISMANTLING: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?output=csv',
-            REFURBISH: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?output=csv'
+            DISMANTLING: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1459081333&single=true&output=csv',
+            REFURBISH: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1167689095&single=true&output=csv'
         };
 
         // State Data
@@ -325,7 +325,7 @@
             return lines;
         }
 
-        // Fetch CSV Live dengan robust Fallback Proxy CORS
+        // Fetch CSV Live dengan Multi-Proxy Fallback Strategy
         async function fetchCSVData() {
             showLoading(true);
             showStatus(`Mengunduh data REPORT NTE ${currentCategory}...`, 'info');
@@ -335,32 +335,64 @@
 
             const targetUrl = SHEET_URLS[currentCategory] || SHEET_URLS.BARU;
             let csvText = '';
+            let fetchSuccess = false;
+
+            // Strategy 1: Direct Fetch
+            try {
+                const res = await fetch(targetUrl, { redirect: 'follow' });
+                if (res.ok) {
+                    const txt = await res.text();
+                    if (txt && !txt.startsWith('PK') && txt.trim().length > 0) { // check if not zip file
+                        csvText = txt;
+                        fetchSuccess = true;
+                    }
+                }
+            } catch (e) {
+                console.warn('Direct fetch error:', e);
+            }
+
+            // Strategy 2: AllOrigins Proxy Fallback
+            if (!fetchSuccess) {
+                try {
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+                    const res = await fetch(proxyUrl);
+                    if (res.ok) {
+                        const txt = await res.text();
+                        if (txt && !txt.startsWith('PK') && txt.trim().length > 0) {
+                            csvText = txt;
+                            fetchSuccess = true;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('AllOrigins proxy error:', e);
+                }
+            }
+
+            // Strategy 3: CorsProxy Fallback
+            if (!fetchSuccess) {
+                try {
+                    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                    const res = await fetch(proxyUrl);
+                    if (res.ok) {
+                        const txt = await res.text();
+                        if (txt && !txt.startsWith('PK') && txt.trim().length > 0) {
+                            csvText = txt;
+                            fetchSuccess = true;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('CorsProxy error:', e);
+                }
+            }
 
             try {
-                // Primary Direct Fetch Attempt
-                try {
-                    const response = await fetch(targetUrl, { redirect: 'follow' });
-                    if (response.ok) {
-                        csvText = await response.text();
-                    } else {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-                } catch (directErr) {
-                    console.warn('Direct fetch failed, trying proxy fallback:', directErr);
-                    // Fallback using CORS Proxy
-                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-                    const proxyResponse = await fetch(proxyUrl);
-                    if (!proxyResponse.ok) throw new Error(`Proxy HTTP ${proxyResponse.status}`);
-                    csvText = await proxyResponse.text();
-                }
-
-                if (!csvText || csvText.trim().length === 0) {
-                    throw new Error("Data sheet kosong.");
+                if (!fetchSuccess || !csvText) {
+                    throw new Error("Gagal mengunduh isi data sheet. Pastikan per masing-masing sheet sudah dipublikasikan ke web sebagai format CSV (.csv).");
                 }
 
                 const matrix = parseCSV(csvText);
 
-                if (!matrix || matrix.length < 3) throw new Error("Format tabel tidak valid.");
+                if (!matrix || matrix.length < 3) throw new Error("Format tabel sheet tidak sesuai.");
 
                 parseStructure(matrix);
                 populateDistrictDropdown();
@@ -369,7 +401,7 @@
                 showStatus(`Data REPORT NTE ${currentCategory} berhasil dimuat!`, 'success');
             } catch (err) {
                 console.error(err);
-                showStatus(`Gagal memuat data Google Sheet (${currentCategory}): ${err.message}. Pastikan sheet telah dipublikasikan ke web (Publish to Web).`, 'error');
+                showStatus(`Gagal memuat data Google Sheet (${currentCategory}): ${err.message}`, 'error');
             } finally {
                 showLoading(false);
                 refreshIcon.classList.remove('fa-spin');
