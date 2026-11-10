@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- PapaParse untuk parsing CSV -->
+    <!-- PapaParse -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -23,7 +23,7 @@
 
     <div class="container mx-auto p-6 space-y-6">
 
-        <!-- Status/Error Notification -->
+        <!-- Status Notification -->
         <div id="status-message" class="hidden p-4 rounded-lg text-sm font-semibold"></div>
 
         <!-- Metric Cards -->
@@ -74,7 +74,7 @@
                 </div>
             </div>
             <div class="bg-white p-5 rounded-lg shadow">
-                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Distribusi Tipe ONT / Kategori</h4>
+                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase">Distribusi Tipe ONT / Merk</h4>
                 <div class="h-64">
                     <canvas id="chartTipe"></canvas>
                 </div>
@@ -105,10 +105,11 @@
     </div>
 
     <script>
-        const sheetID = '1OejhaFCnEhLa8mgkh61QJ7Qk3jNp4PcD2jh96luGbVU';
-        const sheetName = 'NTE BARU';
+        // URL Publish Web CSV langsung milik Anda
+        const publishedCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=844126359&single=true&output=csv';
         
-        let allData = [];
+        let rawParsedData = [];
+        let normalizedData = [];
         let chartWitelInstance = null;
         let chartTipeInstance = null;
 
@@ -121,28 +122,80 @@
             el.innerText = msg;
         }
 
-        async function loadData() {
-            showStatus('Mengambil data khusus sheet NTE BARU...', 'info');
-            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+        function loadData() {
+            showStatus('Menghubungkan ke CSV Publish NTE BARU...', 'info');
             
-            Papa.parse(csvUrl, {
+            Papa.parse(publishedCsvUrl, {
                 download: true,
-                header: true,
+                header: false, // Jangan gunakan header otomatis karena judul kolom di sheet ini terstruktur fleksibel
                 skipEmptyLines: true,
                 complete: function(results) {
                     if (results.data && results.data.length > 0) {
-                        allData = results.data;
+                        rawParsedData = results.data;
+                        processRawMatrix(rawParsedData);
                         initDashboard();
-                        showStatus('Data sheet NTE BARU berhasil dimuat!', 'success');
+                        showStatus('Berhasil mengambil data dari sheet NTE BARU!', 'success');
                         setTimeout(() => document.getElementById('status-message').classList.add('hidden'), 3000);
                     } else {
-                        showStatus('Gagal memuat data: Sheet NTE BARU kosong atau tidak ditemukan.', 'error');
+                        showStatus('Data kosong dari URL Publish.', 'error');
                     }
                 },
                 error: function(err) {
-                    showStatus('Gagal terhubung ke Google Sheets. Pastikan Spreadsheet diset "Anyone with the link can view".', 'error');
+                    showStatus('Gagal membaca data dari link Publish Web.', 'error');
                 }
             });
+        }
+
+        // Fungsi fleksibel membaca baris/kolom tabel NTE BARU
+        function processRawMatrix(rows) {
+            normalizedData = [];
+            
+            let witelCol = -1, jenisCol = -1, merkCol = -1, typeCol = -1, qtyCol = -1;
+            let headerRowIndex = -1;
+
+            // 1. Cari baris header
+            for (let i = 0; i < Math.min(15, rows.length); i++) {
+                const rowUpper = rows[i].map(cell => (cell || '').toString().toUpperCase().trim());
+                
+                rowUpper.forEach((val, colIdx) => {
+                    if (val.includes('WITEL') || val.includes('DISTRIK') || val.includes('REGIONAL')) witelCol = colIdx;
+                    if (val.includes('MODEL') || val.includes('JENIS') || val.includes('KATEGORI')) jenisCol = colIdx;
+                    if (val.includes('MERK') || val.includes('BRAND')) merkCol = colIdx;
+                    if (val.includes('TYPE') || val.includes('TIPE')) typeCol = colIdx;
+                    if (val.includes('QTY') || val.includes('JUMLAH') || val.includes('STOCK')) qtyCol = colIdx;
+                });
+
+                if (witelCol !== -1 || qtyCol !== -1 || merkCol !== -1) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+
+            // Jika header tidak ditemukan otomatis, gunakan index standar kolom CSV
+            if (witelCol === -1) witelCol = 0;
+            if (jenisCol === -1) jenisCol = 1;
+            if (merkCol === -1) merkCol = 2;
+            if (typeCol === -1) typeCol = 3;
+            if (qtyCol === -1) qtyCol = 4;
+
+            // 2. Ambil data baris
+            const startIdx = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
+            for (let i = startIdx; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+
+                const witel = (row[witelCol] || '').trim();
+                const jenis = (row[jenisCol] || '').trim();
+                const merk = (row[merkCol] || '').trim();
+                const type = (row[typeCol] || '').trim();
+                const rawQty = (row[qtyCol] || '0').toString().replace(/[^0-9.-]/g, '');
+                const qty = parseFloat(rawQty) || 0;
+
+                // Salin data jika ada distrik/witel atau qty > 0
+                if (witel || merk || qty > 0) {
+                    normalizedData.push({ witel, jenis, merk, type, qty });
+                }
+            }
         }
 
         function initDashboard() {
@@ -151,8 +204,8 @@
         }
 
         function populateDropdowns() {
-            const witels = [...new Set(allData.map(d => d['WITEL'] || d['DISTRIK'])).filter(Boolean)].sort();
-            const merks = [...new Set(allData.map(d => d['MERK']))].filter(Boolean).sort();
+            const witels = [...new Set(normalizedData.map(d => d.witel).filter(Boolean))].sort();
+            const merks = [...new Set(normalizedData.map(d => d.merk).filter(Boolean))].sort();
 
             const selectWitel = document.getElementById('filter-witel');
             selectWitel.innerHTML = '<option value="ALL">Semua Witel / Distrik</option>';
@@ -174,10 +227,9 @@
             const selectedWitel = document.getElementById('filter-witel').value;
             const selectedMerk = document.getElementById('filter-merk').value;
 
-            const filtered = allData.filter(item => {
-                const witelVal = item['WITEL'] || item['DISTRIK'] || '';
-                const witelMatch = (selectedWitel === 'ALL' || witelVal === selectedWitel);
-                const merkMatch = (selectedMerk === 'ALL' || item['MERK'] === selectedMerk);
+            const filtered = normalizedData.filter(item => {
+                const witelMatch = (selectedWitel === 'ALL' || item.witel === selectedWitel);
+                const merkMatch = (selectedMerk === 'ALL' || item.merk === selectedMerk);
                 return witelMatch && merkMatch;
             });
 
@@ -190,19 +242,19 @@
             const tipeMap = {};
 
             filtered.forEach(item => {
-                const qty = parseFloat(item['QTY'] || item['JUMLAH']) || 0;
-                const jenis = (item['JENIS'] || item['KATEGORI'] || item['MODEL'] || '').toString().toUpperCase();
-                const witel = item['WITEL'] || item['DISTRIK'] || 'UNKNOWN';
-                const tipe = item['TYPE'] || item['MERK'] || 'UNKNOWN';
+                const qty = item.qty;
+                const jenisUpper = (item.jenis || '').toUpperCase();
+                const witel = item.witel || 'LAINNYA';
+                const labelTipe = item.type || item.merk || 'LAINNYA';
 
                 totalStock += qty;
 
-                if (jenis.includes('DUAL BAND') || jenis.includes('DUALBAND')) dualBand += qty;
-                else if (jenis.includes('PREMIUM')) premium += qty;
-                else if (jenis.includes('BIG ONT') || jenis.includes('BIGONT')) bigOnt += qty;
+                if (jenisUpper.includes('DUAL BAND') || jenisUpper.includes('DUALBAND')) dualBand += qty;
+                else if (jenisUpper.includes('PREMIUM')) premium += qty;
+                else if (jenisUpper.includes('BIG ONT') || jenisUpper.includes('BIGONT')) bigOnt += qty;
 
                 witelMap[witel] = (witelMap[witel] || 0) + qty;
-                tipeMap[tipe] = (tipeMap[tipe] || 0) + qty;
+                tipeMap[labelTipe] = (tipeMap[labelTipe] || 0) + qty;
             });
 
             document.getElementById('total-stock').innerText = totalStock.toLocaleString('id-ID');
@@ -214,17 +266,16 @@
             tbody.innerHTML = '';
             
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Tidak ada data ditemukan.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Data tidak ditemukan.</td></tr>`;
             } else {
-                filtered.slice(0, 100).forEach(item => {
-                    const qty = parseFloat(item['QTY'] || item['JUMLAH']) || 0;
+                filtered.slice(0, 150).forEach(item => {
                     tbody.innerHTML += `
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-2 font-medium">${item['WITEL'] || item['DISTRIK'] || '-'}</td>
-                            <td class="px-4 py-2">${item['JENIS'] || item['KATEGORI'] || item['MODEL'] || '-'}</td>
-                            <td class="px-4 py-2 font-semibold">${item['MERK'] || '-'}</td>
-                            <td class="px-4 py-2">${item['TYPE'] || '-'}</td>
-                            <td class="px-4 py-2 text-right font-bold text-blue-700">${qty.toLocaleString('id-ID')}</td>
+                            <td class="px-4 py-2 font-medium">${item.witel || '-'}</td>
+                            <td class="px-4 py-2">${item.jenis || '-'}</td>
+                            <td class="px-4 py-2 font-semibold">${item.merk || '-'}</td>
+                            <td class="px-4 py-2">${item.type || '-'}</td>
+                            <td class="px-4 py-2 text-right font-bold text-blue-700">${item.qty.toLocaleString('id-ID')}</td>
                         </tr>
                     `;
                 });
