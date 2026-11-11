@@ -51,9 +51,9 @@
                             <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                             REPORT NTE BARU (Live Data Sync)
                         </p>
-                        <!-- Keterangan Tanggal Update dari Kolom A Baris 22 -->
+                        <!-- Keterangan Tanggal Update dari Kolom B Baris 22 -->
                         <span id="lastUpdateInfo" class="hidden sm:inline text-red-200 font-medium bg-white/10 px-2 py-0.5 rounded text-[11px] border border-white/10">
-                            <i class="fa-regular fa-calendar-check mr-1"></i><span id="updateDateText">memuat...</span>
+                            <i class="fa-regular fa-calendar-check mr-1"></i>Update : <span id="updateDateText">memuat...</span>
                         </span>
                     </div>
                 </div>
@@ -62,17 +62,18 @@
             <!-- Controls (Category, District Filter, Open GDoc & Reload) -->
             <div class="flex items-center flex-wrap gap-3 w-full sm:w-auto">
                 <!-- Dropdown Kategori Sheet -->
-                <div class="relative flex-1 sm:w-44">
+                <div class="relative flex-1 sm:w-52">
                     <i class="fa-solid fa-layer-group absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     <select id="categoryFilter" class="w-full pl-9 pr-8 py-2 bg-white text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer transition">
                         <option value="BARU">NTE BARU</option>
                         <option value="DISMANTLING">NTE DISMANTLING</option>
                         <option value="REFURBISH">NTE REFURBISH</option>
+                        <option value="TARGET_PSB">Target PSB HSI 2026</option>
                     </select>
                 </div>
 
                 <!-- Dropdown Filter Distrik -->
-                <div class="relative flex-1 sm:w-48">
+                <div id="districtFilterWrapper" class="relative flex-1 sm:w-48">
                     <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     <select id="districtFilter" class="w-full pl-9 pr-8 py-2 bg-white text-slate-700 rounded-lg shadow-sm border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500 cursor-pointer transition">
                         <option value="ALL">Semua Distrik (All Distrik)</option>
@@ -115,7 +116,7 @@
             <div class="h-28 bg-slate-200 rounded-xl"></div>
         </div>
 
-        <!-- Top KPI Cards (Sesuai Permintaan Baru) -->
+        <!-- Top KPI Cards (Tampil Hanya Untuk NTE BARU, DISMANTLING, REFURBISH) -->
         <div id="kpiSection" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 hidden">
             
             <!-- Card 1: Total Unit Stok -->
@@ -231,18 +232,18 @@
 
         </div>
 
-        <!-- Tabel 3: Matrix Rincian Data Per Distrik -->
+        <!-- Tabel 3: Matrix Rincian Data Per Distrik / Target PSB -->
         <div id="fullDataSection" class="glass-card rounded-2xl p-6 shadow-sm hidden space-y-4">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
                 <div>
-                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <h3 id="matrixTitle" class="text-base font-bold text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-table-cells text-slate-600"></i> Rincian Stok Per Distrik
                     </h3>
-                    <p class="text-xs text-slate-500">Matriks persebaran stok per jenis & tipe ONT di tiap distrik</p>
+                    <p id="matrixSubtitle" class="text-xs text-slate-500">Matriks persebaran stok per jenis & tipe ONT di tiap distrik</p>
                 </div>
                 <div class="relative w-full sm:w-64">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text" id="tableSearch" onkeyup="renderMatrixTable()" placeholder="Cari nama distrik..." class="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-red-500 font-medium">
+                    <input type="text" id="tableSearch" onkeyup="renderMatrixTable()" placeholder="Cari nama distrik/witel..." class="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-red-500 font-medium">
                 </div>
             </div>
 
@@ -269,7 +270,8 @@
         const SHEET_URLS = {
             BARU: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1068491274&single=true&output=csv',
             DISMANTLING: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1459081333&single=true&output=csv',
-            REFURBISH: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1167689095&single=true&output=csv'
+            REFURBISH: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=1167689095&single=true&output=csv',
+            TARGET_PSB: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSArsomkZqqdHTWbFeEysmnROFLlwIKLFXX74jqYhxIZ5drF6VFRCBB7chHYdikZtrZS2paiIwIEaSR/pub?gid=123919032&single=true&output=csv'
         };
 
         // State Data
@@ -282,10 +284,29 @@
             // Setup Event Listeners
             document.getElementById('categoryFilter').addEventListener('change', function(e) {
                 currentCategory = e.target.value;
+                const labelMap = {
+                    BARU: 'REPORT NTE BARU',
+                    DISMANTLING: 'REPORT NTE DISMANTLING',
+                    REFURBISH: 'REPORT NTE REFURBISH',
+                    TARGET_PSB: 'Target Bulanan HSI 2026'
+                };
                 document.getElementById('subCategoryTitle').innerHTML = `
                     <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    REPORT NTE ${currentCategory} (Live Data Sync)
+                    ${labelMap[currentCategory] || currentCategory} (Live Data Sync)
                 `;
+
+                // Atur visibilitas filter distrik
+                const distWrapper = document.getElementById('districtFilterWrapper');
+                if (currentCategory === 'TARGET_PSB') {
+                    distWrapper.classList.add('hidden');
+                    document.getElementById('matrixTitle').innerHTML = '<i class="fa-solid fa-bullseye text-teal-700"></i> Target PSB Bulanan HSI 2026';
+                    document.getElementById('matrixSubtitle').textContent = 'Matriks alokasi target PSB bulanan per WITEL 2026';
+                } else {
+                    distWrapper.classList.remove('hidden');
+                    document.getElementById('matrixTitle').innerHTML = '<i class="fa-solid fa-table-cells text-slate-600"></i> Rincian Stok Per Distrik';
+                    document.getElementById('matrixSubtitle').textContent = 'Matriks persebaran stok per jenis & tipe ONT di tiap distrik';
+                }
+
                 fetchCSVData();
             });
 
@@ -340,7 +361,7 @@
         // Fetch CSV Live dengan Multi-Proxy Fallback Strategy
         async function fetchCSVData() {
             showLoading(true);
-            showStatus(`Mengunduh data REPORT NTE ${currentCategory}...`, 'info');
+            showStatus(`Mengunduh data ${currentCategory}...`, 'info');
 
             const refreshIcon = document.getElementById('refreshIcon');
             refreshIcon.classList.add('fa-spin');
@@ -354,7 +375,7 @@
                 const res = await fetch(targetUrl, { redirect: 'follow' });
                 if (res.ok) {
                     const txt = await res.text();
-                    if (txt && !txt.startsWith('PK') && txt.trim().length > 0) { // check if not zip file
+                    if (txt && !txt.startsWith('PK') && txt.trim().length > 0) {
                         csvText = txt;
                         fetchSuccess = true;
                     }
@@ -399,41 +420,40 @@
 
             try {
                 if (!fetchSuccess || !csvText) {
-                    throw new Error("Gagal mengunduh isi data sheet. Pastikan per masing-masing sheet sudah dipublikasikan ke web sebagai format CSV (.csv).");
+                    throw new Error("Gagal mengunduh isi data sheet. Pastikan per masing-masing sheet telah dipublikasikan ke web sebagai format CSV (.csv).");
                 }
 
                 const matrix = parseCSV(csvText);
 
-                if (!matrix || matrix.length < 3) throw new Error("Format tabel sheet tidak sesuai.");
+                if (!matrix || matrix.length < 2) throw new Error("Format tabel sheet tidak sesuai.");
 
                 parseStructure(matrix);
-                populateDistrictDropdown();
+                if (currentCategory !== 'TARGET_PSB') {
+                    populateDistrictDropdown();
+                }
                 processAndRenderData();
 
-                showStatus(`Data REPORT NTE ${currentCategory} berhasil dimuat!`, 'success');
+                showLoading(false);
+                showStatus(`Data ${currentCategory} berhasil dimuat!`, 'success');
             } catch (err) {
-                console.error(err);
+                console.error("Error Processing CSV:", err);
+                showLoading(false);
                 showStatus(`Gagal memuat data Google Sheet (${currentCategory}): ${err.message}`, 'error');
             } finally {
-                showLoading(false);
                 refreshIcon.classList.remove('fa-spin');
             }
         }
 
-        // Parse Sheet Structure (Row 0 = Jenis, Row 1 = Type, Row 2+ = Distrik Data)
+        // Parse Sheet Structure
         function parseStructure(matrix) {
-            const rowJenis = matrix[0] || [];
-            const rowType = matrix[1] || [];
-
             parsedHeaders = [];
             districtRows = [];
 
-            // Ekstrak Informasi Tanggal Update dari KOLOM B BARIS 22 (Indeks Baris 21, Kolom 1)
+            // 1. Ekstrak Informasi Tanggal Update dari KOLOM B BARIS 22
             let updateDateStr = '';
             if (matrix.length >= 22 && matrix[21] && matrix[21][1]) {
                 updateDateStr = matrix[21][1].trim();
             } else {
-                // Fallback pencarian fleksibel jika letak baris bergeser
                 for (let i = 0; i < matrix.length; i++) {
                     const cellVal = matrix[i][1] ? matrix[i][1].trim() : '';
                     if (cellVal && (cellVal.toLowerCase().includes('update') || cellVal.toLowerCase().includes('tanggal') || cellVal.toLowerCase().includes('tgl') || /\d/.test(cellVal))) {
@@ -443,7 +463,6 @@
                 }
             }
 
-            // Bersihkan awalan kata "Update" atau "Update :" dari teks agar tidak duplikat
             if (updateDateStr) {
                 updateDateStr = updateDateStr.replace(/^update\s*:?\s*/i, '').trim();
             }
@@ -455,10 +474,64 @@
                 updateElem.textContent = 'Tidak terdeteksi';
             }
 
+            // 2. Deteksi khusus untuk Sheet Target PSB HSI 2026 (Format WITEL_NEW & Bulan)
+            if (currentCategory === 'TARGET_PSB') {
+                let headerRowIndex = -1;
+
+                for (let r = 0; r < Math.min(15, matrix.length); r++) {
+                    const row = matrix[r] || [];
+                    const firstCell = row[0] ? row[0].trim().toUpperCase() : '';
+                    const rowJoined = row.join(' ').toUpperCase();
+
+                    if (firstCell.includes('WITEL') || rowJoined.includes('202601') || rowJoined.includes('TOTAL FY')) {
+                        headerRowIndex = r;
+                        break;
+                    }
+                }
+
+                if (headerRowIndex === -1) headerRowIndex = 0;
+                const headerRow = matrix[headerRowIndex] || [];
+
+                for (let c = 1; c < headerRow.length; c++) {
+                    const hText = headerRow[c] ? headerRow[c].trim() : '';
+                    if (hText) {
+                        parsedHeaders.push({
+                            colIndex: c,
+                            jenis: 'Target',
+                            type: hText
+                        });
+                    }
+                }
+
+                for (let r = headerRowIndex + 1; r < matrix.length; r++) {
+                    const row = matrix[r];
+                    if (!row || row.length === 0) continue;
+
+                    const witelName = row[0] ? row[0].trim() : '';
+                    if (!witelName || witelName.toLowerCase().startsWith('update')) continue;
+
+                    const counts = [];
+                    parsedHeaders.forEach(h => {
+                        const cellVal = row[h.colIndex];
+                        let val = parseInt(String(cellVal).replace(/[^0-9-]/g, ''), 10);
+                        if (isNaN(val)) val = 0;
+                        counts.push(val);
+                    });
+
+                    districtRows.push({
+                        districtName: witelName,
+                        counts: counts
+                    });
+                }
+                return;
+            }
+
+            // Standard NTE Structure Parsing
+            const rowJenis = matrix[0] || [];
+            const rowType = matrix[1] || [];
             let currentJenis = '';
             const maxCols = Math.max(rowJenis.length, rowType.length);
 
-            // Column B is index 1
             for (let c = 1; c < maxCols; c++) {
                 const jVal = rowJenis[c] ? rowJenis[c].trim() : '';
                 const tVal = rowType[c] ? rowType[c].trim() : '';
@@ -468,28 +541,26 @@
                 if (tVal !== '' || currentJenis !== '') {
                     parsedHeaders.push({
                         colIndex: c,
-                        jenis: currentJenis || 'Lain-lain',
-                        type: tVal || 'Standard'
+                        jenis: currentJenis || 'Kategori',
+                        type: tVal || jVal || `Kolom ${c}`
                     });
                 }
             }
 
-            // Read District Rows
             for (let r = 2; r < matrix.length; r++) {
                 const row = matrix[r];
                 if (!row || row.length === 0) continue;
 
                 const distName = row[0] ? row[0].trim() : '';
                 
-                // Exclude Empty Rows or Totals
-                if (!distName || distName.toLowerCase().includes('total') || distName.toLowerCase() === 'grand total') {
+                if (!distName || distName.toLowerCase().includes('total') || distName.toLowerCase() === 'grand total' || distName.toLowerCase().startsWith('update')) {
                     continue;
                 }
 
                 const counts = [];
                 parsedHeaders.forEach(h => {
                     const cellVal = row[h.colIndex];
-                    let val = parseInt(cellVal, 10);
+                    let val = parseInt(String(cellVal).replace(/[^0-9-]/g, ''), 10);
                     if (isNaN(val)) val = 0;
                     counts.push(val);
                 });
@@ -519,6 +590,20 @@
 
         // Calculation & Rendering Main Logic
         function processAndRenderData() {
+            const kpiSec = document.getElementById('kpiSection');
+            const tablesSec = document.getElementById('tablesSection');
+
+            // Untuk Target PSB HSI 2026: Sembunyikan KPI & Summary Cards, Tampilkan HANYA Tabel Matriks
+            if (currentCategory === 'TARGET_PSB') {
+                kpiSec.classList.add('hidden');
+                tablesSec.classList.add('hidden');
+                renderMatrixTable();
+                return;
+            }
+
+            kpiSec.classList.remove('hidden');
+            tablesSec.classList.remove('hidden');
+
             const filteredRows = selectedDistrict === 'ALL' 
                 ? districtRows 
                 : districtRows.filter(d => d.districtName.toLowerCase() === selectedDistrict.toLowerCase());
@@ -527,14 +612,12 @@
             const typeTotals = {};
             let grandTotal = 0;
 
-            // Header Aggregations
             parsedHeaders.forEach(h => {
                 if (!jenisTotals[h.jenis]) jenisTotals[h.jenis] = 0;
                 const typeKey = `${h.jenis} - ${h.type}`;
                 if (!typeTotals[typeKey]) typeTotals[typeKey] = { jenis: h.jenis, type: h.type, total: 0 };
             });
 
-            // Calculate Counts
             filteredRows.forEach(r => {
                 r.counts.forEach((val, idx) => {
                     const header = parsedHeaders[idx];
@@ -549,19 +632,12 @@
                 });
             });
 
-            // Render KPI Cards (Aturan filter baru)
             renderKPIs(grandTotal, jenisTotals);
-
-            // Render Tables
             renderSummaryTables(jenisTotals, typeTotals, grandTotal);
             renderMatrixTable();
         }
 
-        // Render Cards Info Sesuai Permintaan Spesifik:
-        // 1. Total Unit Stok
-        // 2. ONT Premium (Filter Judul Depan "ONT PREMIUM")
-        // 3. ONT Dual Band (Filter Judul Depan "ONT DUAL BAND")
-        // 4. Big ONT (Filter Judul Depan "BIG ONT")
+        // Render KPI Cards khusus NTE
         function renderKPIs(totalStok, jenisTotals) {
             document.getElementById('kpiTotalStok').textContent = totalStok.toLocaleString('id-ID');
 
@@ -571,16 +647,9 @@
 
             Object.entries(jenisTotals).forEach(([jenisName, count]) => {
                 const upperName = jenisName.toUpperCase();
-                
-                if (upperName.includes('ONT PREMIUM')) {
-                    ontPremiumTotal += count;
-                }
-                if (upperName.includes('ONT DUAL BAND')) {
-                    ontDualBandTotal += count;
-                }
-                if (upperName.includes('BIG ONT')) {
-                    bigOntTotal += count;
-                }
+                if (upperName.includes('ONT PREMIUM') || upperName.includes('PREMIUM')) ontPremiumTotal += count;
+                if (upperName.includes('ONT DUAL BAND') || upperName.includes('DUAL BAND')) ontDualBandTotal += count;
+                if (upperName.includes('BIG ONT') || upperName.includes('BIG')) bigOntTotal += count;
             });
 
             document.getElementById('kpiOntPremium').textContent = ontPremiumTotal.toLocaleString('id-ID');
@@ -588,7 +657,7 @@
             document.getElementById('kpiBigOnt').textContent = bigOntTotal.toLocaleString('id-ID');
         }
 
-        // Render Summary Tables
+        // Render Summary Tables Jenis & Type
         function renderSummaryTables(jenisTotals, typeTotals, grandTotal) {
             // Table Jenis
             const jenisTbody = document.getElementById('jenisTableBody');
@@ -600,11 +669,11 @@
             sortedJenis.forEach(([jenis, count]) => {
                 const pct = grandTotal > 0 ? ((count / grandTotal) * 100).toFixed(1) : 0;
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50 transition';
+                tr.className = 'hover:bg-slate-50 font-medium text-slate-700';
                 tr.innerHTML = `
-                    <td class="p-3 font-semibold text-slate-700">${jenis}</td>
-                    <td class="p-3 text-right font-bold text-slate-800">${count.toLocaleString('id-ID')}</td>
-                    <td class="p-3 text-right font-medium text-slate-500">${pct}%</td>
+                    <td class="p-3 font-semibold text-slate-800">${jenis}</td>
+                    <td class="p-3 text-right font-bold text-slate-900">${count.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-right text-slate-500">${pct}%</td>
                 `;
                 jenisTbody.appendChild(tr);
             });
@@ -618,11 +687,11 @@
 
             sortedTypes.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50 transition';
+                tr.className = 'hover:bg-slate-50 text-slate-700';
                 tr.innerHTML = `
-                    <td class="p-3 text-slate-500 font-medium">${item.jenis}</td>
-                    <td class="p-3 font-semibold text-slate-700">${item.type}</td>
-                    <td class="p-3 text-right font-bold text-slate-800">${item.total.toLocaleString('id-ID')}</td>
+                    <td class="p-3 text-slate-500 text-[11px]">${item.jenis}</td>
+                    <td class="p-3 font-semibold text-slate-800">${item.type}</td>
+                    <td class="p-3 text-right font-bold text-slate-900">${item.total.toLocaleString('id-ID')}</td>
                 `;
                 typeTbody.appendChild(tr);
             });
@@ -633,7 +702,7 @@
             const table = document.getElementById('matrixTable');
             const searchKeyword = (document.getElementById('tableSearch').value || '').toLowerCase();
 
-            let rowsToRender = selectedDistrict === 'ALL'
+            let rowsToRender = (currentCategory === 'TARGET_PSB' || selectedDistrict === 'ALL')
                 ? districtRows
                 : districtRows.filter(d => d.districtName.toLowerCase() === selectedDistrict.toLowerCase());
 
@@ -641,59 +710,87 @@
                 rowsToRender = rowsToRender.filter(r => r.districtName.toLowerCase().includes(searchKeyword));
             }
 
-            // Header Generation
+            const isTargetSheet = currentCategory === 'TARGET_PSB';
+            const firstColName = isTargetSheet ? 'WITEL_NEW' : 'Distrik';
+
+            // Header Generation (Styling Teal/Dark Khas Laporan Target Excel)
             let headerHTML = `
                 <thead>
-                    <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
-                        <th class="p-3 sticky left-0 bg-slate-100 z-20 min-w-[140px] border-r">Distrik</th>
+                    <tr class="${isTargetSheet ? 'bg-teal-900 text-white font-bold' : 'bg-slate-100 text-slate-700'} border-b border-slate-200">
+                        <th class="p-3 sticky left-0 ${isTargetSheet ? 'bg-teal-950 text-white' : 'bg-slate-100 text-slate-700'} z-20 min-w-[150px] border-r tracking-wider uppercase text-xs">${firstColName}</th>
             `;
 
             parsedHeaders.forEach(h => {
                 headerHTML += `
-                    <th class="p-2 text-center border-r min-w-[110px]">
-                        <span class="block text-[10px] uppercase text-slate-400 font-bold">${h.jenis}</span>
-                        <span class="block font-semibold text-slate-800">${h.type}</span>
+                    <th class="p-2.5 text-center border-r min-w-[85px] font-bold text-xs tracking-wide">
+                        ${!isTargetSheet ? `<span class="block text-[10px] uppercase opacity-75 font-normal">${h.jenis}</span>` : ''}
+                        <span class="block">${h.type}</span>
                     </th>
                 `;
             });
 
-            headerHTML += `
-                        <th class="p-3 text-right bg-slate-200 text-slate-800 min-w-[90px] font-bold">Total</th>
-                    </tr>
-                </thead>
-            `;
+            const hasTotalColumnInCSV = parsedHeaders.some(h => h.type.toUpperCase().includes('TOTAL'));
+
+            if (!hasTotalColumnInCSV) {
+                headerHTML += `<th class="p-3 text-center ${isTargetSheet ? 'bg-teal-950 text-amber-300' : 'bg-slate-200 text-slate-800'} min-w-[95px] font-extrabold uppercase text-xs">TOTAL FY</th>`;
+            }
+
+            headerHTML += `</tr></thead>`;
 
             // Body Generation
             let bodyHTML = '<tbody class="divide-y divide-slate-100">';
-            
+            let colTotals = new Array(parsedHeaders.length).fill(0);
+            let grandRowTotal = 0;
+
             if (rowsToRender.length === 0) {
                 bodyHTML += `
                     <tr>
-                        <td colspan="${parsedHeaders.length + 2}" class="p-6 text-center text-slate-400 font-medium">Tidak ada data distrik ditemukan.</td>
+                        <td colspan="${parsedHeaders.length + 2}" class="p-6 text-center text-slate-400 font-medium">Tidak ada data ditemukan.</td>
                     </tr>
                 `;
             } else {
-                rowsToRender.forEach(r => {
+                rowsToRender.forEach((r, idx) => {
                     let rowSum = 0;
-                    bodyHTML += `<tr class="hover:bg-slate-50 transition">`;
-                    bodyHTML += `<td class="p-3 font-semibold text-slate-700 sticky left-0 bg-white border-r z-10">${r.districtName}</td>`;
+                    const isTotalRow = r.districtName.toLowerCase().includes('total');
+                    const rowBgClass = isTotalRow ? 'bg-slate-200 font-bold' : (idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50');
+
+                    bodyHTML += `<tr class="hover:bg-amber-50/60 transition ${rowBgClass}">`;
+                    bodyHTML += `<td class="p-2.5 font-bold text-slate-800 sticky left-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} border-r z-10 text-xs">${r.districtName}</td>`;
                     
-                    r.counts.forEach(cnt => {
+                    r.counts.forEach((cnt, cIdx) => {
                         rowSum += cnt;
-                        const cellStyle = cnt > 0 ? 'text-slate-800 font-semibold' : 'text-slate-300';
-                        bodyHTML += `<td class="p-2 text-center border-r ${cellStyle}">${cnt > 0 ? cnt.toLocaleString('id-ID') : '-'}</td>`;
+                        colTotals[cIdx] += cnt;
+                        const cellStyle = cnt > 0 ? 'text-slate-800 font-medium' : 'text-slate-400';
+                        bodyHTML += `<td class="p-2.5 text-right border-r text-xs ${cellStyle}">${cnt > 0 ? cnt.toLocaleString('id-ID') : '-'}</td>`;
                     });
 
-                    bodyHTML += `<td class="p-3 text-right font-extrabold text-red-600 bg-slate-50">${rowSum.toLocaleString('id-ID')}</td>`;
+                    grandRowTotal += rowSum;
+                    if (!hasTotalColumnInCSV) {
+                        bodyHTML += `<td class="p-2.5 text-right font-extrabold text-slate-900 bg-slate-100 border-l text-xs">${rowSum.toLocaleString('id-ID')}</td>`;
+                    }
+
                     bodyHTML += `</tr>`;
                 });
+
+                // Baris Akumulasi Total di Paling Bawah
+                bodyHTML += `
+                    <tr class="${isTargetSheet ? 'bg-neutral-800 text-white' : 'bg-slate-800 text-white'} font-extrabold border-t-2 border-slate-900">
+                        <td class="p-3 sticky left-0 ${isTargetSheet ? 'bg-neutral-900' : 'bg-slate-900'} text-amber-300 border-r z-10 text-xs text-center uppercase">TOTAL AREA 3</td>
+                `;
+                colTotals.forEach(tot => {
+                    bodyHTML += `<td class="p-2.5 text-right border-r text-xs text-amber-300 font-bold">${tot.toLocaleString('id-ID')}</td>`;
+                });
+                if (!hasTotalColumnInCSV) {
+                    bodyHTML += `<td class="p-2.5 text-right text-amber-400 text-sm font-black ${isTargetSheet ? 'bg-neutral-950' : 'bg-slate-950'}">${grandRowTotal.toLocaleString('id-ID')}</td>`;
+                }
+                bodyHTML += `</tr>`;
             }
 
             bodyHTML += '</tbody>';
             table.innerHTML = headerHTML + bodyHTML;
         }
 
-        // Show/Hide Elements Loading Toggle
+        // Show/Hide Loading Elements Toggle
         function showLoading(isLoading) {
             const loader = document.getElementById('loadingState');
             const kpi = document.getElementById('kpiSection');
@@ -707,18 +804,28 @@
                 fullData.classList.add('hidden');
             } else {
                 loader.classList.add('hidden');
-                kpi.classList.remove('hidden');
-                tables.classList.remove('hidden');
+                if (currentCategory !== 'TARGET_PSB') {
+                    kpi.classList.remove('hidden');
+                    tables.classList.remove('hidden');
+                }
                 fullData.classList.remove('hidden');
             }
         }
 
         // Alert Status Helper
+        let statusTimeout = null;
+        let fadeTimeout = null;
+
         function showStatus(msg, type = 'info') {
             const alert = document.getElementById('statusAlert');
             const icon = document.getElementById('statusIcon');
             const message = document.getElementById('statusMessage');
 
+            // Clear previous timeouts if any
+            if (statusTimeout) clearTimeout(statusTimeout);
+            if (fadeTimeout) clearTimeout(fadeTimeout);
+
+            alert.style.opacity = '1';
             alert.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'bg-red-50', 'text-red-800', 'border-red-200', 'bg-blue-50', 'text-blue-800', 'border-blue-200');
 
             if (type === 'success') {
@@ -733,6 +840,18 @@
             }
 
             message.textContent = msg;
+
+            // Otomatis memudar & hilang setelah 4 detik khusus untuk tipe 'success' atau 'info'
+            if (type === 'success' || type === 'info') {
+                statusTimeout = setTimeout(() => {
+                    alert.style.transition = 'opacity 0.5s ease';
+                    alert.style.opacity = '0';
+                    fadeTimeout = setTimeout(() => {
+                        alert.classList.add('hidden');
+                        alert.style.transition = '';
+                    }, 500);
+                }, 4000);
+            }
         }
     </script>
 </body>
